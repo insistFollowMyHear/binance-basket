@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useState, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../store/store'
@@ -11,6 +11,7 @@ interface RequireAuthProps {
 }
 
 export function RequireAuth({ children }: RequireAuthProps) {
+  const loadedRef = useRef(false)
   const { isAuthenticated, loading } = useSelector((state: RootState) => state.auth)
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -19,6 +20,8 @@ export function RequireAuth({ children }: RequireAuthProps) {
 
   // 检查本地存储中是否有Supabase token
   useEffect(() => {
+    if (loadedRef.current) return
+    loadedRef.current = true
     const checkLocalToken = async () => {
       // 如果已认证，则跳过本地检查
       if (isAuthenticated) {

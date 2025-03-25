@@ -1,4 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
+import { BinanceUser, UserPreference } from './types'
+
+const baseUrl = import.meta.env.VITE_BINANCE_API_URL
 
 // 初始化Supabase客户端
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -17,32 +20,6 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 supabase.auth.onAuthStateChange((event, session) => {
   console.log('Supabase Auth 状态变化:', event, session ? '已登录' : '未登录')
 })
-
-// 用户类型
-export interface User {
-  id: string
-  email: string
-  name?: string
-  avatar_url?: string
-}
-
-// Binance用户类型
-export interface BinanceUser {
-  id: string
-  user_id: string
-  nickname: string
-  api_key: string
-  secret_key: string
-  created_at: string
-  avatar_url?: string
-}
-
-// 用户偏好类型
-export interface UserPreference {
-  id: string
-  user_id: string
-  current_binance_user_id?: string
-}
 
 // 认证相关
 export const auth = {
@@ -222,3 +199,33 @@ export const userPreferences = {
     }
   }
 } 
+
+// 现货交易相关
+export const spotTrading = {
+  // 获取市场深度: 
+  getDepth: async (symbol: string, limit: number = 50, userId: string): Promise<any> => {
+    const response = await fetch(`${baseUrl}/api/spot/depth?symbol=${symbol}&limit=${limit}&userId=${userId}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch depth data')
+    }
+    return response.json()
+  },
+
+  // 获取市场近期交易
+  getTrades: async (symbol: string, limit: number = 50, userId: string): Promise<any> => {
+    const response = await fetch(`${baseUrl}/api/spot/trades?symbol=${symbol}&limit=${limit}&userId=${userId}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch trades data')
+    }
+    return response.json()
+  },
+
+  // 获取市场最新价格
+  getTickerPrice: async (symbol: string, userId: string): Promise<any> => {
+    const response = await fetch(`${baseUrl}/api/spot/ticker/price?symbol=${symbol}&userId=${userId}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch price data')
+    }
+    return response.json()
+  }
+}

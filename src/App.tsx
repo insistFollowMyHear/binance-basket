@@ -4,6 +4,7 @@ import { store } from './store/store'
 import { Header } from './components/Header'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
+import { SpotTrade } from './pages/spotTrading/index'
 import { Profile } from './pages/Profile'
 import { RequireAuth } from './components/RequireAuth'
 import { useSelector } from 'react-redux'
@@ -12,12 +13,13 @@ import { RootState } from './store/store'
 // 路由定义为中心化的配置，更方便管理
 const publicRoutes = [
   { path: '/login', element: <Login /> },
-  { path: '/register', element: <Register /> },
+  { path: '/register', element: <Register /> }
 ]
 
 const protectedRoutes = [
   { path: '/profile', element: <Profile /> },
   // 添加其他需要身份验证的路由
+  { path: '/spot', element: <SpotTrade /> }
 ]
 
 // 应用入口组件，包含路由表和Redux Provider

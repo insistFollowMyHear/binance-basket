@@ -16,9 +16,12 @@ import {
 } from "./ui/dropdown-menu"
 import { LogOut, User, Plus, ChevronDown } from "lucide-react"
 import { useEffect, useState } from "react"
-import { BinanceUser, binanceUsers, userPreferences, auth } from "../services/api"
+import { binanceUsers, userPreferences, auth } from "../services/api"
+import { BinanceUser } from "../services/types"
+import { useRef } from "react"
 
 export function Header() {
+  const loadedRef = useRef(false)
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth)
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -27,8 +30,9 @@ export function Header() {
   const [currentBinanceUser, setCurrentBinanceUser] = useState<BinanceUser | null>(null)
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !loadedRef.current) {
       loadBinanceAccounts()
+      loadedRef.current = true
     }
   }, [isAuthenticated, user])
 
