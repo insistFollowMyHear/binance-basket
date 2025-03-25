@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { spotTrading } from '@/services/api';
+import { spotTrading } from '@/services';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store'
 
@@ -136,9 +136,6 @@ export function SpotTrade() {
     // 获取市场最近50条交易
     async function fetchTrades() {
       try {
-        const trades = await spotTrading.getTrades(selectedPair.symbol, 50, userId)
-        const tickerPrice = await spotTrading.getTickerPrice(selectedPair.symbol, userId)
-        console.log(tickerPrice, trades, '----')
       } catch (error) {
       } finally {
         setIsLoading(false)

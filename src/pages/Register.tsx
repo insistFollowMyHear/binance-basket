@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { useDispatch } from "react-redux"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
-import { auth } from "../services/api"
+import { auth } from "../services"
 import { setUser } from "../store/features/authSlice"
 
 export function Register() {

@@ -16,8 +16,8 @@ import {
 } from "./ui/dropdown-menu"
 import { LogOut, User, Plus, ChevronDown } from "lucide-react"
 import { useEffect, useState } from "react"
-import { binanceUsers, userPreferences, auth } from "../services/api"
-import { BinanceUser } from "../services/types"
+import { binanceUsers, userPreferences, auth } from "../services"
+import { BinanceUser } from "../services/config"
 import { useRef } from "react"
 
 export function Header() {

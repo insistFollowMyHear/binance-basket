@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../store/store'
-import { auth } from '../services/api'
+import { auth } from '../services'
 import { setUser } from '../store/features/authSlice'
 import { Loading } from './ui/loading'
 
