@@ -1,11 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ArrowUpDown, ChevronDown, RefreshCw, Search, X, Trash2, RotateCcw } from "lucide-react";
-import { Loading } from '@/components/ui/loading';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,13 +11,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { RefreshCw, Trash2 } from "lucide-react";
+
 import { spotTrading } from '@/services';
+
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store'
+import MarketPairsList from '@/components/market-pairs-list';
+import OrderHistory from './components/order-history';
+import MarketData from './components/market-data';
+import TradingForm from './components/trading-form';
 
 type OrderType = 'LIMIT' | 'MARKET';
 type OrderSide = 'BUY' | 'SELL';
 type OrderStatus = 'FILLED' | 'CANCELED' | 'NEW';
+
+interface MarketPair {
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+  lastPrice: string;
+  priceChangePercent: string;
+}
 
 interface OrderHistoryItem {
   id: string;
@@ -35,29 +51,16 @@ interface OrderHistoryItem {
   time: string;
 }
 
-interface MarketPair {
-  symbol: string;
-  baseAsset: string;
-  quoteAsset: string;
-  lastPrice: string;
-  priceChangePercent: string;
-}
-
 export function SpotTrade() {
   const loadedRef = useRef(false)
-  const [orderType, setOrderType] = useState<OrderType>('LIMIT');
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedPair, setSelectedPair] = useState<MarketPair>({
     symbol: 'BTCUSDT',
     baseAsset: 'BTC',
     quoteAsset: 'USDT',
-    lastPrice: '64235.50',
-    priceChangePercent: '2.35'
+    lastPrice: '0.00',
+    priceChangePercent: '0.00'
   });
-  const [orderSide, setOrderSide] = useState<OrderSide>('BUY');
-  const [price, setPrice] = useState('');
-  const [amount, setAmount] = useState('');
-  const [total, setTotal] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [orderHistory, setOrderHistory] = useState<OrderHistoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredOrders, setFilteredOrders] = useState<OrderHistoryItem[]>([]);
@@ -65,12 +68,22 @@ export function SpotTrade() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showCancelAllDialog, setShowCancelAllDialog] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderHistoryItem | null>(null);
-  const [viewMode, setViewMode] = useState<'all' | 'open' | 'history'>('all');
+  const [viewMode, setViewMode] = useState<'open' | 'history'>('open');
 
-  const { user: { id: userId } } = useSelector((state: RootState) => state.auth)
+  const [marketPairs, setMarketPairs] = useState<MarketPair[]>([]);
+  const [filteredPairs, setFilteredPairs] = useState<MarketPair[]>([]);
+
+  const { currentUser } = useSelector((state: RootState) => state.auth)
 
   // 模拟获取订单历史
   useEffect(() => {
+    // 获取交易对
+    if (currentUser?.id) {
+      spotTrading.getSymbols(currentUser.id).then(res => {
+        setMarketPairs(res.data);
+        setFilteredPairs(res.data);
+      });
+    }
     setIsLoading(true);
     setTimeout(() => {
       const orders: OrderHistoryItem[] = [
@@ -132,27 +145,7 @@ export function SpotTrade() {
 
     if (loadedRef.current) return
     loadedRef.current = true
-
-    // 获取市场最近50条交易
-    async function fetchTrades() {
-      try {
-      } catch (error) {
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    fetchTrades()
   }, []);
-
-  // 获取市场最近50条交易
-
-
-  // 计算总额
-  useEffect(() => {
-    if (price && amount && orderType === 'LIMIT') {
-      setTotal((parseFloat(price) * parseFloat(amount)).toFixed(2));
-    }
-  }, [price, amount, orderType]);
 
   // 处理订单查询
   const handleOrderQuery = () => {
@@ -230,15 +223,10 @@ export function SpotTrade() {
   const handleCancelAndReplace = (order: OrderHistoryItem) => {
     setSelectedOrder(order);
     setShowCancelDialog(true);
-    // 设置新的价格和数量
-    setPrice(order.price);
-    setAmount(order.quantity);
-    setOrderSide(order.side);
-    setOrderType(order.type);
   };
 
   // 切换视图模式
-  const handleViewModeChange = (mode: 'all' | 'open' | 'history') => {
+  const handleViewModeChange = (mode: 'open' | 'history') => {
     setViewMode(mode);
     setIsLoading(true);
     setTimeout(() => {
@@ -256,16 +244,22 @@ export function SpotTrade() {
     }, 300);
   };
 
-  const handlePlaceOrder = () => {
+  // 下单
+  const handlePlaceOrder = (orderData: {
+    type: OrderType;
+    side: OrderSide;
+    price?: string;
+    amount: string;
+  }) => {
     setIsLoading(true);
     setTimeout(() => {
       const newOrder: OrderHistoryItem = {
         id: Math.random().toString(36).substring(2, 11),
         symbol: selectedPair.symbol,
-        side: orderSide,
-        type: orderType,
-        price: orderType === 'LIMIT' ? price : selectedPair.lastPrice,
-        quantity: amount,
+        side: orderData.side,
+        type: orderData.type,
+        price: orderData.type === 'LIMIT' ? orderData.price! : selectedPair.lastPrice,
+        quantity: orderData.amount,
         status: 'NEW',
         time: new Date().toISOString()
       };
@@ -273,18 +267,34 @@ export function SpotTrade() {
       const updatedOrders = [newOrder, ...orderHistory];
       setOrderHistory(updatedOrders);
       setFilteredOrders(updatedOrders);
-      setAmount('');
-      setPrice('');
-      setTotal('');
       setIsLoading(false);
     }, 1000);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
+  // 处理搜索
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    if (!value.trim()) {
+      setFilteredPairs(marketPairs);
+      return;
+    }
+    
+    const filtered = marketPairs.filter(pair => 
+      pair.symbol.toLowerCase().includes(value.toLowerCase()) ||
+      pair.baseAsset.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredPairs(filtered);
   };
 
+  // 处理交易对选择
+  const handlePairSelect = (symbol: string) => {
+    const selected = marketPairs.find(pair => pair.symbol === symbol);
+    if (selected) {
+      setSelectedPair(selected);
+    }
+  };
+
+  //#region -- 字段翻译
   // 翻译订单状态
   const translateStatus = (status: OrderStatus) => {
     switch(status) {
@@ -304,19 +314,35 @@ export function SpotTrade() {
   const translateOrderSide = (side: OrderSide) => {
     return side === 'BUY' ? '买入' : '卖出';
   };
+  //#endregion
 
   return (
     <div className="container mx-auto p-4 space-y-4">
       {/* 交易对选择器 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <div className="font-bold text-lg">{selectedPair.symbol}</div>
-          <Button variant="ghost" size="sm" className="h-8">
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-          <div className="text-lg font-medium">{selectedPair.lastPrice}</div>
-          <div className={`text-sm ${parseFloat(selectedPair.priceChangePercent) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {parseFloat(selectedPair.priceChangePercent) >= 0 ? '+' : ''}{selectedPair.priceChangePercent}%
+          <div className="relative min-w-[300px]">
+            <div className="flex items-center space-x-2">
+              <Select value={selectedPair.symbol} onValueChange={handlePairSelect}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">{selectedPair.baseAsset}</span>
+                      <span className="text-muted-foreground">/</span>
+                      <span>{selectedPair.quoteAsset}</span>
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <MarketPairsList
+                    pairs={filteredPairs}
+                    searchQuery={searchQuery}
+                    onSearch={handleSearch}
+                    onSelect={handlePairSelect}
+                  />
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -339,318 +365,30 @@ export function SpotTrade() {
       {/* 主要内容 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* 交易模块 */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle>现货交易</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="limit" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="limit" onClick={() => setOrderType('LIMIT')}>限价单</TabsTrigger>
-                <TabsTrigger value="market" onClick={() => setOrderType('MARKET')}>市价单</TabsTrigger>
-              </TabsList>
+        <TradingForm
+          selectedPair={selectedPair}
+          isLoading={isLoading}
+          onPlaceOrder={handlePlaceOrder}
+        />
 
-              <div className="mb-4">
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <Button 
-                    variant={orderSide === 'BUY' ? 'default' : 'outline'} 
-                    className={orderSide === 'BUY' ? 'bg-green-600 hover:bg-green-700' : ''}
-                    onClick={() => setOrderSide('BUY')}
-                  >
-                    买入 {selectedPair.baseAsset}
-                  </Button>
-                  <Button 
-                    variant={orderSide === 'SELL' ? 'default' : 'outline'} 
-                    className={orderSide === 'SELL' ? 'bg-red-600 hover:bg-red-700' : ''}
-                    onClick={() => setOrderSide('SELL')}
-                  >
-                    卖出 {selectedPair.baseAsset}
-                  </Button>
-                </div>
-
-                <TabsContent value="limit">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="price">价格 ({selectedPair.quoteAsset})</Label>
-                      <Input
-                        id="price"
-                        placeholder="0.00"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        type="number"
-                        step="0.01"
-                        min="0"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">数量 ({selectedPair.baseAsset})</Label>
-                      <Input
-                        id="amount"
-                        placeholder="0.00"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        type="number"
-                        step="0.0001"
-                        min="0"
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-4 gap-2">
-                      {[25, 50, 75, 100].map((percent) => (
-                        <Button 
-                          key={percent} 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setAmount((0.01 * percent / 100).toFixed(4));
-                          }}
-                        >
-                          {percent}%
-                        </Button>
-                      ))}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="total">总额 ({selectedPair.quoteAsset})</Label>
-                      <Input
-                        id="total"
-                        placeholder="0.00"
-                        value={total}
-                        onChange={(e) => {
-                          setTotal(e.target.value);
-                          if (price && parseFloat(price) > 0) {
-                            setAmount((parseFloat(e.target.value) / parseFloat(price)).toFixed(4));
-                          }
-                        }}
-                        type="number"
-                        step="0.01"
-                        min="0"
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="market">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="market-amount">
-                        {orderSide === 'BUY' 
-                          ? `金额 (${selectedPair.quoteAsset})` 
-                          : `数量 (${selectedPair.baseAsset})`}
-                      </Label>
-                      <Input
-                        id="market-amount"
-                        placeholder="0.00"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        type="number"
-                        step="0.0001"
-                        min="0"
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-4 gap-2">
-                      {[25, 50, 75, 100].map((percent) => (
-                        <Button 
-                          key={percent} 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setAmount((0.01 * percent / 100).toFixed(4));
-                          }}
-                        >
-                          {percent}%
-                        </Button>
-                      ))}
-                    </div>
-                    
-                    <div className="text-sm text-muted-foreground">
-                      市价单将以当前最优市场价格执行。
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <div className="mt-6">
-                  <Button 
-                    className="w-full" 
-                    disabled={isLoading || !amount || (orderType === 'LIMIT' && !price)}
-                    onClick={handlePlaceOrder}
-                    variant={orderSide === 'BUY' ? 'default' : 'destructive'}
-                  >
-                    {isLoading ? <Loading size="sm" /> : (
-                      orderSide === 'BUY' 
-                        ? `买入 ${selectedPair.baseAsset}` 
-                        : `卖出 ${selectedPair.baseAsset}`
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        {/* 订单簿/交易图表占位符 */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle>市场数据</CardTitle>
-          </CardHeader>
-          <CardContent className="min-h-[400px] flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <ArrowUpDown className="mx-auto h-12 w-12 mb-4" />
-              <p>这里将显示交易图表</p>
-              <p className="text-sm">价格走势、订单簿和深度图</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* 市场数据 */}
+        <MarketData />
       </div>
 
-      {/* 订单历史表格 */}
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <CardTitle>订单历史</CardTitle>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant={viewMode === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleViewModeChange('all')}
-                >
-                  全部
-                </Button>
-                <Button
-                  variant={viewMode === 'open' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleViewModeChange('open')}
-                >
-                  当前挂单
-                </Button>
-                <Button
-                  variant={viewMode === 'history' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleViewModeChange('history')}
-                >
-                  历史订单
-                </Button>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Input
-                  className="pl-8 h-8 w-[200px] md:w-[300px]"
-                  placeholder="输入交易对或订单ID搜索"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleOrderQuery()}
-                />
-                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                {searchQuery && (
-                  <button
-                    onClick={clearSearch}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              <Button variant="outline" size="sm" className="h-8" onClick={handleOrderQuery}>
-                查询
-              </Button>
-            </div>
-          </div>
-          {isOrderQueryActive && (
-            <div className="mt-2 flex items-center text-sm text-muted-foreground">
-              <span>
-                搜索结果: {filteredOrders.length} 条订单
-                {searchQuery && <span className="ml-1">（关键词: "{searchQuery}"）</span>}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 ml-2 text-xs"
-                onClick={clearSearch}
-              >
-                清除筛选
-              </Button>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loading />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4">时间</th>
-                    <th className="text-left py-3 px-4">交易对</th>
-                    <th className="text-left py-3 px-4">类型</th>
-                    <th className="text-left py-3 px-4">方向</th>
-                    <th className="text-right py-3 px-4">价格</th>
-                    <th className="text-right py-3 px-4">数量</th>
-                    <th className="text-left py-3 px-4">状态</th>
-                    <th className="text-right py-3 px-4">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrders.length > 0 ? (
-                    filteredOrders.map((order) => (
-                      <tr key={order.id} className="border-b hover:bg-muted/50">
-                        <td className="py-3 px-4">{formatDate(order.time)}</td>
-                        <td className="py-3 px-4">{order.symbol}</td>
-                        <td className="py-3 px-4">{translateOrderType(order.type)}</td>
-                        <td className={`py-3 px-4 ${order.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
-                          {translateOrderSide(order.side)}
-                        </td>
-                        <td className="py-3 px-4 text-right">{order.price}</td>
-                        <td className="py-3 px-4 text-right">{order.quantity}</td>
-                        <td className={`py-3 px-4 ${
-                          order.status === 'FILLED' ? 'text-green-500' : 
-                          order.status === 'CANCELED' ? 'text-muted-foreground' : 'text-blue-500'
-                        }`}>
-                          {translateStatus(order.status)}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          {order.status === 'NEW' && (
-                            <div className="flex justify-end space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-red-500 hover:text-red-600"
-                                onClick={() => handleCancelOrder(order)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-blue-500 hover:text-blue-600"
-                                onClick={() => handleCancelAndReplace(order)}
-                              >
-                                <RotateCcw className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={8} className="py-8 text-center text-muted-foreground">
-                        {isOrderQueryActive ? '未找到匹配的订单记录' : '暂无订单记录'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* 订单历史 */}
+      <OrderHistory
+        isLoading={isLoading}
+        viewMode={viewMode}
+        searchQuery={searchQuery}
+        filteredOrders={filteredOrders}
+        isOrderQueryActive={isOrderQueryActive}
+        onViewModeChange={handleViewModeChange}
+        onSearchChange={setSearchQuery}
+        onSearch={handleOrderQuery}
+        onClearSearch={clearSearch}
+        onCancelOrder={handleCancelOrder}
+        onCancelAndReplace={handleCancelAndReplace}
+      />
 
       {/* 撤销订单确认对话框 */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { RootState } from '../store/store'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-import { Wallet, TrendingUp, TrendingDown } from 'lucide-react'
+import { Wallet } from 'lucide-react'
 import { Loading } from './ui/loading'
 import { userPreferences } from '../services/userPreferences'
 
@@ -38,8 +38,8 @@ export function UserProfile() {
         // }))
       setAccountAssets(balanceList)
       // 计算总资产价值
-      // const total = balanceList.reduce((sum: number, asset: any) => sum + Number(asset.free) + Number(asset.locked), 0)
-      // setTotalAssetValue(total)
+      const total = balanceList.reduce((sum: number, asset: any) => sum + Number(asset.free) + Number(asset.locked), 0)
+      setTotalAssetValue(total)
     } catch (error) {
       console.error('获取用户账户失败', error)
     } finally {

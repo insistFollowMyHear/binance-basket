@@ -1,6 +1,14 @@
 import { baseUrl } from './config'
 
 export const spotTrading = {
+  getSymbols: async (userId: string): Promise<any> => {
+    const response = await fetch(`${baseUrl}/api/spot/symbols?userId=${userId}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch symbols')
+    }
+    return response.json()
+  },
+
   // // 获取市场深度
   // getDepth: async (symbol: string, limit: number = 50, userId: string): Promise<any> => {
   //   const response = await fetch(`${baseUrl}/api/spot/depth?symbol=${symbol}&limit=${limit}&userId=${userId}`)
