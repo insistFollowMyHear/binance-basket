@@ -14,20 +14,38 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
-import { LogOut, User, Plus, ChevronDown } from "lucide-react"
+import { LogOut, User, Plus, ChevronDown, Trash2, Edit } from "lucide-react"
 import { useEffect, useState } from "react"
 import { binanceUsers, userPreferences, auth } from "../services"
 import { BinanceUser } from "../services/config"
 import { useRef } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Input } from "./ui/input"
+import { Label } from "./ui/label"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog"
+import { useLoading } from "../hooks/useLoading"
+import { setCurrentUser } from "../store/features/authSlice"
 
 export function Header() {
   const loadedRef = useRef(false)
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth)
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const { withLoading, showLoading, hideLoading } = useLoading()
   
   const [binanceAccounts, setBinanceAccounts] = useState<BinanceUser[]>([])
   const [currentBinanceUser, setCurrentBinanceUser] = useState<BinanceUser | null>(null)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<BinanceUser | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // 表单状态
+  const [name, setName] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [secretKey, setSecretKey] = useState('')
+  const [avatar, setAvatar] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
   useEffect(() => {
     if (isAuthenticated && user && !loadedRef.current) {
@@ -48,11 +66,14 @@ export function Header() {
         const current = accounts.find(acc => acc.id === preference.current_binance_user_id)
         if (current) {
           setCurrentBinanceUser(current)
+          dispatch(setCurrentUser(current))
         } else {
           setCurrentBinanceUser(accounts[0])
+          dispatch(setCurrentUser(accounts[0]))
         }
       } else if (accounts.length > 0) {
         setCurrentBinanceUser(accounts[0])
+        dispatch(setCurrentUser(accounts[0]))
         if (user.id) {
           await userPreferences.updateCurrentBinanceUserId(user.id, accounts[0].id)
         }
@@ -102,6 +123,148 @@ export function Header() {
       .join('')
       .toUpperCase()
       .substring(0, 2)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      setAvatar(file)
+      
+      // 创建预览
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const resetForm = () => {
+    setName('')
+    setApiKey('')
+    setSecretKey('')
+    setAvatar(null)
+    setAvatarPreview(null)
+    setEditingUser(null)
+  }
+
+  // 添加账户
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    withLoading(async () => {
+      try {
+        let avatarUrl = ''
+        
+        // 如果有头像，先上传
+        if (avatar) {
+          avatarUrl = await binanceUsers.uploadAvatar(user.id, avatar)
+        }
+        
+        // 创建新用户
+        const newUser = await binanceUsers.create({
+          user_id: user.id,
+          nickname: name,
+          api_key: apiKey,
+          secret_key: secretKey,
+          avatar_url: avatarUrl || undefined
+        })
+
+        // 更新状态
+        setBinanceAccounts([...binanceAccounts, newUser])
+        
+        // 如果这是第一个账户，设为当前账户
+        if (binanceAccounts.length === 0) {
+          setCurrentBinanceUser(newUser)
+          await userPreferences.updateCurrentBinanceUserId(user.id, newUser.id)
+        }
+        
+        // 重置表单和关闭对话框
+        resetForm()
+        setAddDialogOpen(false)
+      } catch (error) {
+        console.error('添加用户失败:', error)
+        alert('添加用户失败，请重试')
+      }
+    }, '添加账户中...')
+  }
+
+  // 编辑账户
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!editingUser) return
+    
+    withLoading(async () => {
+      try {
+        let avatarUrl = editingUser.avatar_url || ''
+        
+        // 如果有新头像，上传
+        if (avatar) {
+          avatarUrl = await binanceUsers.uploadAvatar(user.id, avatar)
+        }
+        
+        // 更新用户
+        const updatedUser = await binanceUsers.update(editingUser.id, {
+          nickname: name,
+          api_key: apiKey,
+          secret_key: secretKey,
+          avatar_url: avatarUrl || undefined
+        })
+        
+        // 更新状态
+        setBinanceAccounts(
+          binanceAccounts.map(acc => (acc.id === updatedUser.id ? updatedUser : acc))
+        )
+        
+        if (currentBinanceUser?.id === updatedUser.id) {
+          setCurrentBinanceUser(updatedUser)
+        }
+        
+        // 重置表单和关闭对话框
+        resetForm()
+        setEditDialogOpen(false)
+      } catch (error) {
+        console.error('更新用户失败:', error)
+        alert('更新用户失败，请重试')
+      }
+    }, '更新账户中...')
+  }
+
+  // 删除账户
+  const handleDeleteUser = async (id: string) => {
+    try {
+      setIsDeleting(true)
+      showLoading('删除账户中...')
+      await binanceUsers.delete(id)
+      
+      // 刷新账户列表
+      const updatedAccounts = binanceAccounts.filter(account => account.id !== id)
+      setBinanceAccounts(updatedAccounts)
+
+      // 如果删除的是当前账户，需要更新当前账户
+      if (id === currentBinanceUser?.id && updatedAccounts.length > 0) {
+        await handleSwitchBinanceUser(updatedAccounts[0].id)
+      } else if (updatedAccounts.length === 0) {
+        setCurrentBinanceUser(null)
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('删除用户失败:', error)
+    } finally {
+      hideLoading()
+      setIsDeleting(false)
+    }
+  }
+
+  // 打开编辑对话框
+  const openEditDialog = (user: BinanceUser) => {
+    setEditingUser(user)
+    setName(user.nickname)
+    setApiKey(user.api_key)
+    setSecretKey(user.secret_key)
+    setAvatarPreview(user.avatar_url || null)
+    setEditDialogOpen(true)
   }
 
   return (
@@ -190,30 +353,70 @@ export function Header() {
                         </div>
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuLabel>切换账户</DropdownMenuLabel>
                       {binanceAccounts.map((account) => (
                         <DropdownMenuItem
                           key={account.id}
-                          onClick={() => handleSwitchBinanceUser(account.id)}
-                          className={currentBinanceUser?.id === account.id ? "bg-muted" : ""}
+                          className="flex items-center justify-between"
                         >
-                          <Avatar className="h-5 w-5 mr-2">
-                            {account.avatar_url ? (
-                              <AvatarImage src={account.avatar_url} />
-                            ) : (
-                              <AvatarFallback>{getInitials(account.nickname)}</AvatarFallback>
-                            )}
-                          </Avatar>
-                          <span>{account.nickname}</span>
+                          <div
+                            className="flex items-center flex-1 cursor-pointer"
+                            onClick={() => handleSwitchBinanceUser(account.id)}
+                          >
+                            <Avatar className="h-5 w-5 mr-2">
+                              {account.avatar_url ? (
+                                <AvatarImage src={account.avatar_url} />
+                              ) : (
+                                <AvatarFallback>{getInitials(account.nickname)}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            <span>{account.nickname}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => openEditDialog(account)}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-destructive"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>确定要删除此账户吗？</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    此操作无法撤销。这将永久删除此Binance账户及其所有相关数据。
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>取消</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteUser(account.id)}
+                                    disabled={isDeleting}
+                                  >
+                                    {isDeleting ? "删除中..." : "确认删除"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </DropdownMenuItem>
                       ))}
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/profile" className="flex items-center cursor-pointer">
-                          <Plus className="mr-2 h-4 w-4" />
-                          <span>管理账户</span>
-                        </Link>
+                      <DropdownMenuItem onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        <span>添加账户</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -268,6 +471,156 @@ export function Header() {
           </div>
         </div>
       </div>
+
+      {/* Add Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>添加 Binance 账户</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddUser} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="avatar">头像</Label>
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  {avatarPreview ? (
+                    <AvatarImage src={avatarPreview} />
+                  ) : (
+                    <AvatarFallback>+</AvatarFallback>
+                  )}
+                </Avatar>
+                <Input
+                  id="avatar"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="name">名称</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">API Key</Label>
+              <Input
+                id="apiKey"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="secretKey">Secret Key</Label>
+              <Input
+                id="secretKey"
+                type="password"
+                value={secretKey}
+                onChange={(e) => setSecretKey(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  resetForm()
+                  setAddDialogOpen(false)
+                }}
+              >
+                取消
+              </Button>
+              <Button type="submit">添加</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>编辑 Binance 账户</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditUser} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-avatar">头像</Label>
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  {avatarPreview ? (
+                    <AvatarImage src={avatarPreview} />
+                  ) : (
+                    <AvatarFallback>
+                      {editingUser ? getInitials(editingUser.nickname) : '+'}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <Input
+                  id="edit-avatar"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">名称</Label>
+              <Input
+                id="edit-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-apiKey">API Key</Label>
+              <Input
+                id="edit-apiKey"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-secretKey">Secret Key</Label>
+              <Input
+                id="edit-secretKey"
+                type="password"
+                value={secretKey}
+                onChange={(e) => setSecretKey(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  resetForm()
+                  setEditDialogOpen(false)
+                }}
+              >
+                取消
+              </Button>
+              <Button type="submit">保存</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </header>
   )
 }
