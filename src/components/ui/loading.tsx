@@ -22,11 +22,11 @@ export function Loading({
 
   const loadingContent = (
     <div className={cn(
-      "flex flex-col items-center justify-center space-y-2",
+      "flex items-center justify-center space-y-2",
       className
     )}>
       <Loader2 className={cn("animate-spin text-primary", sizeMap[size])} />
-      {text && <p className="text-sm text-muted-foreground">{text}</p>}
+      {text && <p className="text-sm text-muted-foreground" style={{ marginTop: '0px' }}>{text}</p>}
     </div>
   )
 

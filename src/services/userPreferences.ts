@@ -1,4 +1,4 @@
-import { supabase, UserPreference, baseUrl } from './config'
+import { supabase, UserPreference } from './config'
 
 export const userPreferences = {
   // 获取用户偏好
@@ -41,32 +41,5 @@ export const userPreferences = {
         current_binance_user_id: binanceUserId
       })
     }
-  },
-
-  // 获取当前用户现货账户信息
-  getBinanceUserAccount: async (binanceUserId: string): Promise<UserPreference | null> => {
-    const response = await fetch(`${baseUrl}/api/user/account?id=${binanceUserId}`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch user account data')
-    }
-    return response.json()
-  },
-
-  // 获取当前用户U本位合约账户余额
-  getBinanceUserFuturesAccount: async (binanceUserId: string): Promise<UserPreference | null> => {
-    const response = await fetch(`${baseUrl}/api/user/futures/balance?id=${binanceUserId}`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch user futures account data')
-    }
-    return response.json()
-  },
-
-  // 获取当前用户币本位合约账户余额
-  getBinanceUserFuturesCoinAccount: async (binanceUserId: string): Promise<UserPreference | null> => {
-    const response = await fetch(`${baseUrl}/api/user/futures/coin/balance?id=${binanceUserId}`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch user futures coin account data')
-    }
-    return response.json()
   }
 } 

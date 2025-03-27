@@ -5,22 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loading } from '@/components/ui/loading';
-
-type OrderType = 'LIMIT' | 'MARKET';
-type OrderSide = 'BUY' | 'SELL';
-
-interface MarketPair {
-  symbol: string;
-  baseAsset: string;
-  quoteAsset: string;
-  lastPrice: string;
-  priceChangePercent: string;
-}
+import {
+  OrderType,
+  OrderSide,
+  UserAccount,
+  MarketPair
+} from '../types';
 
 interface TradingFormProps {
   selectedPair: MarketPair;
   isLoading: boolean;
+  userAccount: UserAccount;
   onPlaceOrder: (orderData: {
+    symbol: string;
     type: OrderType;
     side: OrderSide;
     price?: string;
@@ -44,10 +41,11 @@ const TradingForm: React.FC<TradingFormProps> = ({
     if (price && amount && orderType === 'LIMIT') {
       setTotal((parseFloat(price) * parseFloat(amount)).toFixed(2));
     }
-  }, [price, amount, orderType]);
+  }, [price, amount]);
 
   const handleSubmit = () => {
     onPlaceOrder({
+      symbol: selectedPair.symbol,
       type: orderType,
       side: orderSide,
       price: orderType === 'LIMIT' ? price : undefined,
@@ -118,7 +116,7 @@ const TradingForm: React.FC<TradingFormProps> = ({
                   />
                 </div>
                 
-                <div className="grid grid-cols-4 gap-2">
+                {/* <div className="grid grid-cols-4 gap-2">
                   {[25, 50, 75, 100].map((percent) => (
                     <Button 
                       key={percent} 
@@ -131,7 +129,7 @@ const TradingForm: React.FC<TradingFormProps> = ({
                       {percent}%
                     </Button>
                   ))}
-                </div>
+                </div> */}
                 
                 <div className="space-y-2">
                   <Label htmlFor="total">总额 ({selectedPair.quoteAsset})</Label>
@@ -172,7 +170,7 @@ const TradingForm: React.FC<TradingFormProps> = ({
                   />
                 </div>
                 
-                <div className="grid grid-cols-4 gap-2">
+                {/* <div className="grid grid-cols-4 gap-2">
                   {[25, 50, 75, 100].map((percent) => (
                     <Button 
                       key={percent} 
@@ -185,7 +183,7 @@ const TradingForm: React.FC<TradingFormProps> = ({
                       {percent}%
                     </Button>
                   ))}
-                </div>
+                </div> */}
                 
                 <div className="text-sm text-muted-foreground">
                   市价单将以当前最优市场价格执行。
@@ -200,7 +198,7 @@ const TradingForm: React.FC<TradingFormProps> = ({
                 onClick={handleSubmit}
                 variant={orderSide === 'BUY' ? 'default' : 'destructive'}
               >
-                {isLoading ? <Loading size="sm" /> : (
+                {isLoading ? <Loading size="sm" text="提交中..." /> : (
                   orderSide === 'BUY' 
                     ? `买入 ${selectedPair.baseAsset}` 
                     : `卖出 ${selectedPair.baseAsset}`

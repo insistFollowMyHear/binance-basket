@@ -1,38 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';  
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loading } from '@/components/ui/loading';
 import { Search, X, Trash2, RotateCcw } from "lucide-react";
-
-type OrderType = 'LIMIT' | 'MARKET';
-type OrderSide = 'BUY' | 'SELL';
-type OrderStatus = 'FILLED' | 'CANCELED' | 'NEW';
-
-interface OrderHistoryItem {
-  id: string;
-  symbol: string;
-  side: OrderSide;
-  type: OrderType;
-  price: string;
-  quantity: string;
-  status: OrderStatus;
-  time: string;
-}
-
-interface OrderHistoryProps {
-  isLoading: boolean;
-  viewMode: 'open' | 'history';
-  searchQuery: string;
-  filteredOrders: OrderHistoryItem[];
-  isOrderQueryActive: boolean;
-  onViewModeChange: (mode: 'open' | 'history') => void;
-  onSearchChange: (value: string) => void;
-  onSearch: () => void;
-  onClearSearch: () => void;
-  onCancelOrder: (order: OrderHistoryItem) => void;
-  onCancelAndReplace: (order: OrderHistoryItem) => void;
-}
+import { spotTrading } from '@/services/spotTrading';
+import { OrderType, OrderSide, OrderStatus, OrderHistoryProps } from '../types';
 
 const OrderHistory: React.FC<OrderHistoryProps> = ({
   isLoading,
@@ -40,6 +13,8 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
   searchQuery,
   filteredOrders,
   isOrderQueryActive,
+  currentUser,
+  selectedPair,
   onViewModeChange,
   onSearchChange,
   onSearch,
@@ -47,6 +22,34 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
   onCancelOrder,
   onCancelAndReplace,
 }) => {
+  const loadedRef = useRef(false)
+
+  useEffect(() => {
+    if (!currentUser?.id) return
+    if (loadedRef.current) return
+    loadedRef.current = true
+    getUserOpenOrders()
+    getUserAllOrders()
+  }, [currentUser?.id, selectedPair.symbol])
+
+  // 获取用户当前挂单
+  const getUserOpenOrders = async () => {
+    const res = await spotTrading.getOpenOrders(currentUser?.id, selectedPair.symbol)
+    console.log(res)
+  }
+
+  // 获取用户交易历史
+  const getUserAllOrders = async () => {
+    const res = await spotTrading.getAllOrders(
+      currentUser?.id,
+      'USDTBTC',
+      1716796800000,
+      1716883200000,
+      100
+    )
+    console.log(res)
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString();

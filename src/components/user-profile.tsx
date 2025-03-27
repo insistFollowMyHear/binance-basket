@@ -4,8 +4,7 @@ import { RootState } from '../store/store'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Wallet } from 'lucide-react'
 import { Loading } from './ui/loading'
-import { userPreferences } from '../services/userPreferences'
-
+import { spotTrading } from '../services/spotTrading'
 interface AssetBalance {
   asset: string
   free: string
@@ -26,7 +25,7 @@ export function UserProfile() {
 
   const loadUserAccount = async () => {
     try {
-      const binanceUserAccount: any = await userPreferences.getBinanceUserAccount(currentUser.id)
+      const binanceUserAccount: any = await spotTrading.getUserAccount(currentUser.id)
       const { balances = [] } = binanceUserAccount.data
       // 只统计有余额的资产
       const balanceList = balances

@@ -27,29 +27,7 @@ import MarketPairsList from '@/components/market-pairs-list';
 import OrderHistory from './components/order-history';
 import MarketData from './components/market-data';
 import TradingForm from './components/trading-form';
-
-type OrderType = 'LIMIT' | 'MARKET';
-type OrderSide = 'BUY' | 'SELL';
-type OrderStatus = 'FILLED' | 'CANCELED' | 'NEW';
-
-interface MarketPair {
-  symbol: string;
-  baseAsset: string;
-  quoteAsset: string;
-  lastPrice: string;
-  priceChangePercent: string;
-}
-
-interface OrderHistoryItem {
-  id: string;
-  symbol: string;
-  side: OrderSide;
-  type: OrderType;
-  price: string;
-  quantity: string;
-  status: OrderStatus;
-  time: string;
-}
+import { MarketPair, OrderHistoryItem, OrderType, OrderSide, OrderStatus, UserAccount } from './types';
 
 export function SpotTrade() {
   const loadedRef = useRef(false)
@@ -59,15 +37,22 @@ export function SpotTrade() {
     baseAsset: 'BTC',
     quoteAsset: 'USDT',
     lastPrice: '0.00',
-    priceChangePercent: '0.00'
+    priceChangePercent: '0.00',
+    minQuantity: '0',
+    minNotional: '0'
   });
-  const [orderHistory, setOrderHistory] = useState<OrderHistoryItem[]>([]);
+  const [userAccount, setUserAccount] = useState<UserAccount>({
+    baseAsset: 0,
+    quoteAsset: 0
+  })
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [orderHistory, setOrderHistory] = useState<OrderHistoryItem[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<OrderHistoryItem[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<OrderHistoryItem | null>(null);
   const [isOrderQueryActive, setIsOrderQueryActive] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showCancelAllDialog, setShowCancelAllDialog] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<OrderHistoryItem | null>(null);
   const [viewMode, setViewMode] = useState<'open' | 'history'>('open');
 
   const [marketPairs, setMarketPairs] = useState<MarketPair[]>([]);
@@ -75,77 +60,63 @@ export function SpotTrade() {
 
   const { currentUser } = useSelector((state: RootState) => state.auth)
 
-  // 模拟获取订单历史
+  // 加载数据
   useEffect(() => {
-    // 获取交易对
-    if (currentUser?.id) {
-      spotTrading.getSymbols(currentUser.id).then(res => {
-        setMarketPairs(res.data);
-        setFilteredPairs(res.data);
-      });
-    }
-    setIsLoading(true);
-    setTimeout(() => {
-      const orders: OrderHistoryItem[] = [
-        {
-          id: '123456789',
-          symbol: 'BTCUSDT',
-          side: 'BUY',
-          type: 'LIMIT',
-          price: '64100.50',
-          quantity: '0.01',
-          status: 'FILLED',
-          time: new Date().toISOString()
-        },
-        {
-          id: '123456788',
-          symbol: 'BTCUSDT',
-          side: 'SELL',
-          type: 'MARKET',
-          price: '64235.50',
-          quantity: '0.005',
-          status: 'FILLED',
-          time: new Date(Date.now() - 3600000).toISOString()
-        },
-        {
-          id: '123456787',
-          symbol: 'ETHUSDT',
-          side: 'BUY',
-          type: 'LIMIT',
-          price: '3410.25',
-          quantity: '0.15',
-          status: 'CANCELED',
-          time: new Date(Date.now() - 7200000).toISOString()
-        },
-        {
-          id: '123456786',
-          symbol: 'ETHUSDT',
-          side: 'SELL',
-          type: 'LIMIT',
-          price: '3450.80',
-          quantity: '0.25',
-          status: 'NEW',
-          time: new Date(Date.now() - 10800000).toISOString()
-        },
-        {
-          id: '123456785',
-          symbol: 'BNBUSDT',
-          side: 'BUY',
-          type: 'MARKET',
-          price: '570.20',
-          quantity: '1.5',
-          status: 'FILLED',
-          time: new Date(Date.now() - 14400000).toISOString()
-        }
-      ];
-      setOrderHistory(orders);
-      setFilteredOrders(orders);
-      setIsLoading(false);
-    }, 1000);
-
+    if (!currentUser?.id) return
     if (loadedRef.current) return
     loadedRef.current = true
-  }, []);
+    getSymbols()
+    getUserAccount()
+  }, [currentUser?.id]);
+
+  // 获取用户资产
+  const getUserAccount = async () => {
+    const res = await spotTrading.getUserAccount(currentUser?.id)
+    let _baseAsset = 0
+    let _quoteAsset = 0
+    res.data?.balances.forEach((item: any) => {
+      if (item.asset === selectedPair.baseAsset) {
+        _baseAsset = item.free
+      }
+      if (item.asset === selectedPair.quoteAsset) {
+        _quoteAsset = item.free
+      }
+    })
+    setUserAccount({
+      baseAsset: _baseAsset,
+      quoteAsset: _quoteAsset
+    })
+  }
+
+  // 获取交易对
+  const getSymbols = async () => {
+    const res = await spotTrading.getSymbols(currentUser?.id)
+    // 过滤掉已暂停的交易对
+    const activeSymbols = res.data.filter((symbol: any) => 
+      symbol.status === 'TRADING' && 
+      !symbol.isSpotTradingAllowed === false
+    );
+    
+    // 转换为 MarketPair 格式并保存最小交易数量信息
+    const formattedPairs = activeSymbols.map((symbol: any): MarketPair => ({
+      symbol: symbol.symbol,
+      baseAsset: symbol.baseAsset,
+      quoteAsset: symbol.quoteAsset,
+      lastPrice: '0.00',
+      priceChangePercent: '0.00',
+      minQuantity: symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE')?.minQty || '0',
+      minNotional: symbol.filters.find((f: any) => f.filterType === 'MIN_NOTIONAL')?.minNotional || '0'
+    }));
+
+    setMarketPairs(formattedPairs);
+    setFilteredPairs(formattedPairs);
+
+    // 如果当前选中的交易对在数据中，更新其信息
+    const currentPair = formattedPairs.find((pair: MarketPair) => pair.symbol === selectedPair.symbol);
+    if (currentPair) {
+      setSelectedPair(currentPair);
+    }
+  }
 
   // 处理订单查询
   const handleOrderQuery = () => {
@@ -246,6 +217,7 @@ export function SpotTrade() {
 
   // 下单
   const handlePlaceOrder = (orderData: {
+    symbol: string;
     type: OrderType;
     side: OrderSide;
     price?: string;
@@ -271,7 +243,7 @@ export function SpotTrade() {
     }, 1000);
   };
 
-  // 处理搜索
+  // 处理交易对搜索
   const handleSearch = (value: string) => {
     setSearchQuery(value);
     if (!value.trim()) {
@@ -279,7 +251,7 @@ export function SpotTrade() {
       return;
     }
     
-    const filtered = marketPairs.filter(pair => 
+    const filtered = marketPairs.filter((pair: MarketPair) => 
       pair.symbol.toLowerCase().includes(value.toLowerCase()) ||
       pair.baseAsset.toLowerCase().includes(value.toLowerCase())
     );
@@ -288,23 +260,13 @@ export function SpotTrade() {
 
   // 处理交易对选择
   const handlePairSelect = (symbol: string) => {
-    const selected = marketPairs.find(pair => pair.symbol === symbol);
+    const selected = marketPairs.find((pair: MarketPair) => pair.symbol === symbol);
     if (selected) {
       setSelectedPair(selected);
     }
   };
 
   //#region -- 字段翻译
-  // 翻译订单状态
-  const translateStatus = (status: OrderStatus) => {
-    switch(status) {
-      case 'FILLED': return '已成交';
-      case 'CANCELED': return '已取消';
-      case 'NEW': return '未成交';
-      default: return status;
-    }
-  };
-
   // 翻译订单类型
   const translateOrderType = (type: OrderType) => {
     return type === 'LIMIT' ? '限价单' : '市价单';
@@ -320,11 +282,11 @@ export function SpotTrade() {
     <div className="container mx-auto p-4 space-y-4">
       {/* 交易对选择器 */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="relative min-w-[300px]">
-            <div className="flex items-center space-x-2">
+        <div className="flex flex-1 items-center space-x-2">
+          <div className="relative w-full min-w-[300px]">
+            <div className="flex flex-col space-y-2">
               <Select value={selectedPair.symbol} onValueChange={handlePairSelect}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full max-w-[300px]">
                   <SelectValue>
                     <div className="flex items-center gap-2">
                       <span className="font-bold">{selectedPair.baseAsset}</span>
@@ -342,6 +304,10 @@ export function SpotTrade() {
                   />
                 </SelectContent>
               </Select>
+              <div className="flex text-sm text-muted-foreground">
+                <div className="mr-10">最小交易数量: {selectedPair.minQuantity} {selectedPair.baseAsset}</div>
+                <div>最小交易额: {selectedPair.minNotional} {selectedPair.quoteAsset}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -368,6 +334,7 @@ export function SpotTrade() {
         <TradingForm
           selectedPair={selectedPair}
           isLoading={isLoading}
+          userAccount={userAccount}
           onPlaceOrder={handlePlaceOrder}
         />
 
@@ -382,6 +349,8 @@ export function SpotTrade() {
         searchQuery={searchQuery}
         filteredOrders={filteredOrders}
         isOrderQueryActive={isOrderQueryActive}
+        currentUser={currentUser}
+        selectedPair={selectedPair}
         onViewModeChange={handleViewModeChange}
         onSearchChange={setSearchQuery}
         onSearch={handleOrderQuery}
