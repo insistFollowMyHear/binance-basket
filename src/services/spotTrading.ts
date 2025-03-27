@@ -29,10 +29,19 @@ export const spotTrading = {
   },
 
   // 用户所有订单
-  getAllOrders: async (binanceUserId: string, symbol: string, startTime: number, endTime: number, limit: number): Promise<any> => {
-    const response = await fetch(`${baseUrl}/api/spot/allOrders?id=${binanceUserId}&symbol=${symbol}&startTime=${startTime}&endTime=${endTime}&limit=${limit}`) 
+  getAllOrders: async ( binanceUserId: string, symbol: string): Promise<any> => {
+    const response = await fetch(`${baseUrl}/api/spot/allOrders?id=${binanceUserId}&symbol=${symbol}`)
     if (!response.ok) {
       throw new Error('Failed to fetch all orders')
+    }
+    return response.json()
+  },
+
+  // 下单测试
+  testOrder: async (binanceUserId: string, symbol: string, side: string, quantity: number, price: number, type: string): Promise<any> => {
+    const response = await fetch(`${baseUrl}/api/spot/testOrder?id=${binanceUserId}&symbol=${symbol}&side=${side}&quantity=${quantity}&price=${price}&type=${type}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch test order')
     }
     return response.json()
   },

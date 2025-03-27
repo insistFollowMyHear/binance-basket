@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { RefreshCw, Trash2 } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 import { spotTrading } from '@/services';
 
@@ -38,8 +38,17 @@ export function SpotTrade() {
     quoteAsset: 'USDT',
     lastPrice: '0.00',
     priceChangePercent: '0.00',
-    minQuantity: '0',
-    minNotional: '0'
+    baseAssetPrecision: 0,
+    quoteAssetPrecision: 0,
+    limitOrder: {
+      minQty: '0',
+      maxQty: '0',
+      stepSize: '0'
+    },
+    marketOrder: {
+      minNotional: '0',
+      maxNotional: '0'
+    }
   });
   const [userAccount, setUserAccount] = useState<UserAccount>({
     baseAsset: 0,
@@ -104,8 +113,17 @@ export function SpotTrade() {
       quoteAsset: symbol.quoteAsset,
       lastPrice: '0.00',
       priceChangePercent: '0.00',
-      minQuantity: symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE')?.minQty || '0',
-      minNotional: symbol.filters.find((f: any) => f.filterType === 'MIN_NOTIONAL')?.minNotional || '0'
+      baseAssetPrecision: symbol.baseAssetPrecision || 0,
+      quoteAssetPrecision: symbol.quoteAssetPrecision || 0,
+      limitOrder: {
+        minQty: symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE')?.minQty || '0',
+        maxQty: symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE')?.maxQty || '0',
+        stepSize: symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE')?.stepSize || '0'
+      },
+      marketOrder: {
+        minNotional: symbol.filters.find((f: any) => f.filterType === "NOTIONAL")?.minNotional || '0',
+        maxNotional: symbol.filters.find((f: any) => f.filterType === "NOTIONAL")?.maxNotional || '0'
+      }
     }));
 
     setMarketPairs(formattedPairs);
@@ -117,6 +135,66 @@ export function SpotTrade() {
       setSelectedPair(currentPair);
     }
   }
+
+  // 处理交易对搜索
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    if (!value.trim()) {
+      setFilteredPairs(marketPairs);
+      return;
+    }
+    
+    const filtered = marketPairs.filter((pair: MarketPair) => 
+      pair.symbol.toLowerCase().includes(value.toLowerCase()) ||
+      pair.baseAsset.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredPairs(filtered);
+  };
+
+  // 处理交易对选择
+  const handlePairSelect = (symbol: string) => {
+    const selected = marketPairs.find((pair: MarketPair) => pair.symbol === symbol);
+    if (selected) {
+      setSelectedPair(selected);
+    }
+  };
+
+  // 下单
+  const handlePlaceOrder = async (orderData: {
+    symbol: string;
+    type: OrderType;
+    side: OrderSide;
+    price?: string;
+    amount: string;
+  }) => {
+    setIsLoading(true);
+    const res = await spotTrading.testOrder(
+      currentUser?.id,
+      orderData.symbol,
+      orderData.side,
+      parseFloat(orderData.amount),
+      parseFloat(orderData.price || '0'),
+      orderData.type
+    )
+    console.log(res)
+    // setTimeout(() => {
+    //   const newOrder: OrderHistoryItem = {
+    //     id: Math.random().toString(36).substring(2, 11),
+    //     symbol: selectedPair.symbol,
+    //     side: orderData.side,
+    //     type: orderData.type,
+    //     price: orderData.type === 'LIMIT' ? orderData.price! : selectedPair.lastPrice,
+    //     quantity: orderData.amount,
+    //     status: 'NEW',
+    //     time: new Date().toISOString()
+    //   };
+      
+    //   const updatedOrders = [newOrder, ...orderHistory];
+    //   setOrderHistory(updatedOrders);
+    //   setFilteredOrders(updatedOrders);
+    //   setIsLoading(false);
+    // }, 1000);
+  };
 
   // 处理订单查询
   const handleOrderQuery = () => {
@@ -190,13 +268,7 @@ export function SpotTrade() {
     }, 500);
   };
 
-  // 撤销挂单并重新下单
-  const handleCancelAndReplace = (order: OrderHistoryItem) => {
-    setSelectedOrder(order);
-    setShowCancelDialog(true);
-  };
-
-  // 切换视图模式
+  // 切换订单视图
   const handleViewModeChange = (mode: 'open' | 'history') => {
     setViewMode(mode);
     setIsLoading(true);
@@ -215,68 +287,13 @@ export function SpotTrade() {
     }, 300);
   };
 
-  // 下单
-  const handlePlaceOrder = (orderData: {
-    symbol: string;
-    type: OrderType;
-    side: OrderSide;
-    price?: string;
-    amount: string;
-  }) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const newOrder: OrderHistoryItem = {
-        id: Math.random().toString(36).substring(2, 11),
-        symbol: selectedPair.symbol,
-        side: orderData.side,
-        type: orderData.type,
-        price: orderData.type === 'LIMIT' ? orderData.price! : selectedPair.lastPrice,
-        quantity: orderData.amount,
-        status: 'NEW',
-        time: new Date().toISOString()
-      };
-      
-      const updatedOrders = [newOrder, ...orderHistory];
-      setOrderHistory(updatedOrders);
-      setFilteredOrders(updatedOrders);
-      setIsLoading(false);
-    }, 1000);
-  };
-
-  // 处理交易对搜索
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
-    if (!value.trim()) {
-      setFilteredPairs(marketPairs);
-      return;
-    }
-    
-    const filtered = marketPairs.filter((pair: MarketPair) => 
-      pair.symbol.toLowerCase().includes(value.toLowerCase()) ||
-      pair.baseAsset.toLowerCase().includes(value.toLowerCase())
-    );
-    setFilteredPairs(filtered);
-  };
-
-  // 处理交易对选择
-  const handlePairSelect = (symbol: string) => {
-    const selected = marketPairs.find((pair: MarketPair) => pair.symbol === symbol);
-    if (selected) {
-      setSelectedPair(selected);
-    }
-  };
-
-  //#region -- 字段翻译
-  // 翻译订单类型
   const translateOrderType = (type: OrderType) => {
     return type === 'LIMIT' ? '限价单' : '市价单';
   };
 
-  // 翻译订单方向
   const translateOrderSide = (side: OrderSide) => {
     return side === 'BUY' ? '买入' : '卖出';
   };
-  //#endregion
 
   return (
     <div className="container mx-auto p-4 space-y-4">
@@ -305,22 +322,13 @@ export function SpotTrade() {
                 </SelectContent>
               </Select>
               <div className="flex text-sm text-muted-foreground">
-                <div className="mr-10">最小交易数量: {selectedPair.minQuantity} {selectedPair.baseAsset}</div>
-                <div>最小交易额: {selectedPair.minNotional} {selectedPair.quoteAsset}</div>
+                <div className="mr-10">最小交易数量: {selectedPair.limitOrder?.minQty} {selectedPair.baseAsset}</div>
+                <div>最小交易额: {selectedPair.marketOrder?.minNotional} {selectedPair.quoteAsset}</div>
               </div>
             </div>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8"
-            onClick={handleCancelAllOrders}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            撤销所有挂单
-          </Button>
           <Button variant="outline" size="sm" className="h-8">
             <RefreshCw className="h-4 w-4 mr-2" />
             刷新
@@ -356,7 +364,7 @@ export function SpotTrade() {
         onSearch={handleOrderQuery}
         onClearSearch={clearSearch}
         onCancelOrder={handleCancelOrder}
-        onCancelAndReplace={handleCancelAndReplace}
+        onCancelAllOrders={handleCancelAllOrders}
       />
 
       {/* 撤销订单确认对话框 */}

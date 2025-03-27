@@ -25,5 +25,5 @@ export interface OrderHistoryProps {
   onSearch: () => void;
   onClearSearch: () => void;
   onCancelOrder: (order: OrderHistoryItem) => void;
-  onCancelAndReplace: (order: OrderHistoryItem) => void;
+  onCancelAllOrders: () => void;
 }

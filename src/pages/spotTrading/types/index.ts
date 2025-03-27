@@ -1,4 +1,5 @@
 export * from './order-history';
+export * from './trading-form';
 
 export type OrderType = 'LIMIT' | 'MARKET';
 export type OrderSide = 'BUY' | 'SELL';
@@ -11,8 +12,17 @@ export interface MarketPair {
   quoteAsset: string;
   lastPrice: string;
   priceChangePercent: string;
-  minQuantity: string;
-  minNotional: string;
+  baseAssetPrecision?: number;
+  quoteAssetPrecision?: number;
+  limitOrder?: {
+    minQty: string;
+    maxQty: string;
+    stepSize: string;
+  }
+  marketOrder?: {
+    minNotional: string;
+    maxNotional: string;
+  }
 }
 
 // 订单历史

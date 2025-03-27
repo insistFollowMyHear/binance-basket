@@ -8,22 +8,8 @@ import { Loading } from '@/components/ui/loading';
 import {
   OrderType,
   OrderSide,
-  UserAccount,
-  MarketPair
+  TradingFormProps,
 } from '../types';
-
-interface TradingFormProps {
-  selectedPair: MarketPair;
-  isLoading: boolean;
-  userAccount: UserAccount;
-  onPlaceOrder: (orderData: {
-    symbol: string;
-    type: OrderType;
-    side: OrderSide;
-    price?: string;
-    amount: string;
-  }) => void;
-}
 
 const TradingForm: React.FC<TradingFormProps> = ({
   selectedPair,
@@ -39,11 +25,64 @@ const TradingForm: React.FC<TradingFormProps> = ({
   // 计算总额
   useEffect(() => {
     if (price && amount && orderType === 'LIMIT') {
-      setTotal((parseFloat(price) * parseFloat(amount)).toFixed(2));
+      setTotal((parseFloat(price) * parseFloat(amount)).toFixed(selectedPair.quoteAssetPrecision || 8));
     }
   }, [price, amount]);
 
+  // 获取 step 的小数位数
+  const getDecimalPlaces = (step: string): number => {
+    const parts = step.split('.');
+    if (parts.length < 2) return 0;
+    return parts[1].length;
+  };
+
+  // 处理数量输入
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (!value) {
+      setAmount('');
+      return;
+    }
+
+    // 获取 step 的小数位数
+    const stepSize = Number(selectedPair.limitOrder?.stepSize).toString() || '0.00000001';
+    const maxDecimals = getDecimalPlaces(stepSize);
+
+    // 处理小数点后的位数
+    const parts = value.split('.');
+    if (parts.length > 1 && parts[1].length > maxDecimals) {
+      // 如果小数部分超过允许的位数，截取到允许的位数
+      const truncated = parseFloat(value).toFixed(maxDecimals);
+      setAmount(truncated);
+    } else {
+      setAmount(value);
+    }
+  };
+
+  // 处理价格输入
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (!value) {
+      setPrice('');
+      return;
+    }
+
+    // 使用报价资产精度
+    const maxDecimals = selectedPair.quoteAssetPrecision || 8;
+
+    // 处理小数点后的位数
+    const parts = value.split('.');
+    if (parts.length > 1 && parts[1].length > maxDecimals) {
+      // 如果小数部分超过允许的位数，截取到允许的位数
+      const truncated = parseFloat(value).toFixed(maxDecimals);
+      setPrice(truncated);
+    } else {
+      setPrice(value);
+    }
+  };
+
   const handleSubmit = () => {
+    console.log(selectedPair)
     onPlaceOrder({
       symbol: selectedPair.symbol,
       type: orderType,
@@ -96,10 +135,9 @@ const TradingForm: React.FC<TradingFormProps> = ({
                     id="price"
                     placeholder="0.00"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={handlePriceChange}
                     type="number"
-                    step="0.01"
-                    min="0"
+                    step={1 / Math.pow(10, selectedPair.quoteAssetPrecision || 8)} 
                   />
                 </div>
                 
@@ -109,27 +147,12 @@ const TradingForm: React.FC<TradingFormProps> = ({
                     id="amount"
                     placeholder="0.00"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={handleAmountChange}
                     type="number"
-                    step="0.0001"
-                    min="0"
+                    step={selectedPair.limitOrder?.stepSize}
+                    min={selectedPair.limitOrder?.minQty}
                   />
                 </div>
-                
-                {/* <div className="grid grid-cols-4 gap-2">
-                  {[25, 50, 75, 100].map((percent) => (
-                    <Button 
-                      key={percent} 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        setAmount((0.01 * percent / 100).toFixed(4));
-                      }}
-                    >
-                      {percent}%
-                    </Button>
-                  ))}
-                </div> */}
                 
                 <div className="space-y-2">
                   <Label htmlFor="total">总额 ({selectedPair.quoteAsset})</Label>
@@ -137,14 +160,9 @@ const TradingForm: React.FC<TradingFormProps> = ({
                     id="total"
                     placeholder="0.00"
                     value={total}
-                    onChange={(e) => {
-                      setTotal(e.target.value);
-                      if (price && parseFloat(price) > 0) {
-                        setAmount((parseFloat(e.target.value) / parseFloat(price)).toFixed(4));
-                      }
-                    }}
+                    onChange={(e) => setTotal(e.target.value)}
                     type="number"
-                    step="0.01"
+                    step={1 / Math.pow(10, selectedPair.quoteAssetPrecision || 8)} 
                     min="0"
                   />
                 </div>
@@ -163,27 +181,14 @@ const TradingForm: React.FC<TradingFormProps> = ({
                     id="market-amount"
                     placeholder="0.00"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={handleAmountChange}
                     type="number"
-                    step="0.0001"
-                    min="0"
+                    step={selectedPair.limitOrder?.stepSize}
+                    min={orderSide === 'BUY' 
+                      ? selectedPair.marketOrder?.minNotional
+                      : selectedPair.limitOrder?.minQty}
                   />
                 </div>
-                
-                {/* <div className="grid grid-cols-4 gap-2">
-                  {[25, 50, 75, 100].map((percent) => (
-                    <Button 
-                      key={percent} 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        setAmount((0.01 * percent / 100).toFixed(4));
-                      }}
-                    >
-                      {percent}%
-                    </Button>
-                  ))}
-                </div> */}
                 
                 <div className="text-sm text-muted-foreground">
                   市价单将以当前最优市场价格执行。

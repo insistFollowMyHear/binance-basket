@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';  
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import React, { useEffect, useRef, useState } from 'react';  
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loading } from '@/components/ui/loading';
-import { Search, X, Trash2, RotateCcw } from "lucide-react";
+import { Search, X, Trash2 } from "lucide-react";
 import { spotTrading } from '@/services/spotTrading';
 import { OrderType, OrderSide, OrderStatus, OrderHistoryProps } from '../types';
 
@@ -20,7 +20,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
   onSearch,
   onClearSearch,
   onCancelOrder,
-  onCancelAndReplace,
+  onCancelAllOrders
 }) => {
   const loadedRef = useRef(false)
 
@@ -40,14 +40,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
 
   // 获取用户交易历史
   const getUserAllOrders = async () => {
-    const res = await spotTrading.getAllOrders(
-      currentUser?.id,
-      'USDTBTC',
-      1716796800000,
-      1716883200000,
-      100
-    )
-    console.log(res)
+    const res = await spotTrading.getAllOrders(currentUser?.id,selectedPair.symbol)
   }
 
   const formatDate = (dateString: string) => {
@@ -77,7 +70,6 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <CardTitle>订单历史</CardTitle>
             <div className="flex items-center space-x-2">
               <Button
                 variant={viewMode === 'open' ? 'default' : 'outline'}
@@ -116,6 +108,15 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
             </div>
             <Button variant="outline" size="sm" className="h-8" onClick={onSearch}>
               查询
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8"
+              onClick={onCancelAllOrders}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              撤销所有挂单
             </Button>
           </div>
         </div>
@@ -184,14 +185,6 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                               onClick={() => onCancelOrder(order)}
                             >
                               <Trash2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-blue-500 hover:text-blue-600"
-                              onClick={() => onCancelAndReplace(order)}
-                            >
-                              <RotateCcw className="h-4 w-4" />
                             </Button>
                           </div>
                         )}
