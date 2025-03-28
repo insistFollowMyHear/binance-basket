@@ -1,44 +1,38 @@
-interface RequestParams {
-  [key: string]: string | number | boolean | undefined;
+import axios from 'axios';
+
+interface RequestConfig {
+  timeout?: number;
+  headers?: Record<string, string>;
 }
 
-function buildQueryString(params: RequestParams): string {
-  const queryParams = Object.entries(params)
-    .filter(([_, value]) => value !== undefined)
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-    .join('&');
-  return queryParams ? `?${queryParams}` : '';
-}
+const baseUrl = import.meta.env.VITE_BINANCE_API_URL || 'http://localhost:3000';
 
-export async function get(url: string, params: RequestParams = {}): Promise<any> {
+const request = axios.create({
+  baseURL: baseUrl,
+  timeout: 30000,
+});
+
+export const get = async (url: string, params?: any, config?: RequestConfig) => {
   try {
-    const queryString = buildQueryString(params);
-    const response = await fetch(`${url}${queryString}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    const response = await request.get(url, { params, ...config });
+    return response.data;
   } catch (error) {
-    console.error('GET request failed:', error);
+    console.error('Request failed:', error);
     throw error;
   }
-}
+};
 
-export async function post(url: string, data: any = {}): Promise<any> {
+export const post = async (url: string, data?: any, config?: RequestConfig) => {
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    const response = await request.post(url, data, config);
+    return response.data;
   } catch (error) {
-    console.error('POST request failed:', error);
+    console.error('Request failed:', error);
     throw error;
   }
-} 
+};
+
+export default {
+  get,
+  post,
+}; 

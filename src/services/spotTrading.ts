@@ -24,28 +24,33 @@ export const spotTrading = {
 
   // 撤销订单
   cancelOrder: async (binanceUserId: string, symbol: string, orderId: number): Promise<any> => {
-    return post(`${baseUrl}/api/spot/cancelOrder?id=${binanceUserId}`, {
-      symbol,
-      orderId
-    });
+    try {
+      const response = await post(`${baseUrl}/api/spot/cancelOrder?id=${binanceUserId}`, {
+        symbol,
+        orderId
+      }, {
+        timeout: 10000 // 设置10秒超时
+      });
+      return response;
+    } catch (error) {
+      console.error('Cancel order failed:', error);
+      throw error;
+    }
   },
 
   // 撤销所有订单
   cancelAllOrders: async (binanceUserId: string, symbol: string): Promise<any> => {
-    return post(`${baseUrl}/api/spot/cancelAllOrders?id=${binanceUserId}`, {
-      symbol
-    });
-  },
-
-  // 下单测试
-  testOrder: async (binanceUserId: string, symbol: string, side: string, quantity: number, price: number, type: string): Promise<any> => {
-    return get(`${baseUrl}/api/spot/testOrder`, {
-      id: binanceUserId,
-      symbol,
-      side,
-      quantity,
-      price,
-      type
-    });
+    try {
+      const response = await post(`${baseUrl}/api/spot/cancelAllOrders?id=${binanceUserId}`, {
+        symbol,
+        recvWindow: 10000 // 增加接收窗口时间
+      }, {
+        timeout: 15000 // 设置15秒超时
+      });
+      return response;
+    } catch (error) {
+      console.error('Cancel all orders failed:', error);
+      throw error;
+    }
   }
 } 
