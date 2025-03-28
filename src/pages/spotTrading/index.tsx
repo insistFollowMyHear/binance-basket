@@ -18,7 +18,7 @@ import MarketPairsList from '@/components/market-pairs-list';
 import OrderHistory from './components/order-history';
 import MarketData from './components/market-data';
 import TradingForm from './components/trading-form';
-import { MarketPair, OrderType, OrderSide, UserAccount } from './types';
+import { MarketPair, UserAccount } from './types';
 
 const STORAGE_KEY = 'selectedTradingPair';
 
@@ -26,7 +26,7 @@ export function SpotTrade() {
   const dispatch = useDispatch();
   const loadedRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, _setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedPair, setSelectedPair] = useState<MarketPair>(() => {
     // 从 localStorage 读取保存的交易对
@@ -180,32 +180,6 @@ export function SpotTrade() {
     }
   };
 
-  // 下单
-  const handlePlaceOrder = async (orderData: {
-    symbol: string;
-    type: OrderType;
-    side: OrderSide;
-    price?: string;
-    amount: string;
-  }) => {
-    setIsLoading(true);
-    try {
-      const res = await spotTrading.testOrder(
-        currentUser?.id,
-        orderData.symbol,
-        orderData.side,
-        parseFloat(orderData.amount),
-        parseFloat(orderData.price || '0'),
-        orderData.type
-      );
-      console.log(res);
-    } catch (error) {
-      console.error('Failed to place order:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="container mx-auto p-4 space-y-4">
       {/* 交易对选择器 */}
@@ -269,10 +243,11 @@ export function SpotTrade() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* 交易模块 */}
         <TradingForm
+          currentUser={currentUser}
           selectedPair={selectedPair}
           isLoading={isLoading}
           userAccount={userAccount}
-          onPlaceOrder={handlePlaceOrder}
+          onRefreshData={refreshData}
         />
 
         {/* 市场数据 */}

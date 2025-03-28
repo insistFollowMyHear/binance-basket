@@ -44,14 +44,9 @@ export interface OrderHistoryProps {
 }
 
 export interface TradingFormProps {
+  currentUser: any;
   selectedPair: MarketPair;
   isLoading: boolean;
   userAccount: UserAccount;
-  onPlaceOrder: (orderData: {
-    symbol: string;
-    type: OrderType;
-    side: OrderSide;
-    price?: string;
-    amount: string;
-  }) => void;
+  onRefreshData: () => Promise<void>;
 } 

@@ -52,5 +52,113 @@ export const spotTrading = {
       console.error('Cancel all orders failed:', error);
       throw error;
     }
+  },
+
+  // 创建订单
+  createOrder: async (
+    binanceUserId: string,
+    symbol: string,
+    side: string,
+    type: string,
+    quantity: string,
+    price?: string,
+  ): Promise<any> => {
+    try {
+      const baseParams = {
+        symbol,
+        side,
+        type,
+      };
+
+      let orderParams;
+      
+      if (type === 'LIMIT') {
+        if (!price) {
+          throw new Error('Price is required for LIMIT orders');
+        }
+        orderParams = {
+          ...baseParams,
+          quantity,
+          price,
+          timeInForce: 'GTC', // Good Till Cancel
+        };
+      } else if (type === 'MARKET') {
+        // 对于市价单，买入使用交易额(quoteOrderQty)，卖出使用数量(quantity)
+        orderParams = {
+          ...baseParams,
+          ...(side === 'BUY'
+            ? { quoteOrderQty: quantity } // 买入：使用交易额
+            : { quantity }) // 卖出：使用数量
+        };
+      } else {
+        throw new Error('Unsupported order type');
+      }
+
+      const response = await post(
+        `${baseUrl}/api/spot/createOrder?id=${binanceUserId}`,
+        orderParams,
+        {
+          timeout: 10000
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error('Create order failed:', error);
+      throw error;
+    }
+  },
+
+  // 创建测试订单
+  createTestOrder: async (
+    binanceUserId: string,
+    symbol: string,
+    side: string,
+    type: string,
+    quantity: string,
+    price?: string,
+  ): Promise<any> => {
+    try {
+      const baseParams = {
+        symbol,
+        side,
+        type,
+      };
+
+      let orderParams;
+      
+      if (type === 'LIMIT') {
+        if (!price) {
+          throw new Error('Price is required for LIMIT orders');
+        }
+        orderParams = {
+          ...baseParams,
+          quantity,
+          price,
+          timeInForce: 'GTC', // Good Till Cancel
+        };
+      } else if (type === 'MARKET') {
+        // 对于市价单，买入使用交易额(quoteOrderQty)，卖出使用数量(quantity)
+        orderParams = {
+          ...baseParams,
+          ...(side === 'BUY'
+            ? { quoteOrderQty: quantity } // 买入：使用交易额
+            : { quantity }) // 卖出：使用数量
+        };
+      } else {
+        throw new Error('Unsupported order type');
+      }
+
+      const response = await post(
+        `${baseUrl}/api/spot/createTestOrder?id=${binanceUserId}`,
+        orderParams,
+        {
+          timeout: 10000
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error('Create test order failed:', error);
+      throw error;
+    }
   }
 } 

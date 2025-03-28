@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loading } from '@/components/ui/loading';
+import { spotTrading } from '@/services/spotTrading';
 import {
   OrderType,
   OrderSide,
@@ -12,15 +13,18 @@ import {
 } from '../types';
 
 const TradingForm: React.FC<TradingFormProps> = ({
+  currentUser,
   selectedPair,
-  isLoading,
-  onPlaceOrder,
+  isLoading: externalLoading,
+  onRefreshData
 }) => {
   const [orderType, setOrderType] = useState<OrderType>('LIMIT');
   const [orderSide, setOrderSide] = useState<OrderSide>('BUY');
   const [price, setPrice] = useState('');
   const [amount, setAmount] = useState('');
   const [total, setTotal] = useState('');
+  const [isTestLoading, setIsTestLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // 计算总额
   useEffect(() => {
@@ -81,20 +85,88 @@ const TradingForm: React.FC<TradingFormProps> = ({
     }
   };
 
-  const handleSubmit = () => {
-    console.log(selectedPair)
-    onPlaceOrder({
-      symbol: selectedPair.symbol,
-      type: orderType,
-      side: orderSide,
-      price: orderType === 'LIMIT' ? price : undefined,
-      amount,
-    });
-    
-    // 清空表单
-    setAmount('');
-    setPrice('');
-    setTotal('');
+  // 验证订单
+  const validateOrder = () => {
+    if (!amount) {
+      throw new Error('请输入数量');
+    }
+
+    if (orderType === 'LIMIT' && !price) {
+      throw new Error('限价单请输入价格');
+    }
+
+    // 验证最小交易数量
+    const minQty = parseFloat(selectedPair.limitOrder?.minQty || '0');
+    if (orderType === 'LIMIT' || (orderType === 'MARKET' && orderSide === 'SELL')) {
+      if (parseFloat(amount) < minQty) {
+        throw new Error(`最小交易数量为 ${minQty} ${selectedPair.baseAsset}`);
+      }
+    }
+
+    // 验证最小名义价值
+    const minNotional = parseFloat(selectedPair.marketOrder?.minNotional || '0');
+    if (orderType === 'MARKET' && orderSide === 'BUY') {
+      if (parseFloat(amount) < minNotional) {
+        throw new Error(`最小交易金额为 ${minNotional} ${selectedPair.quoteAsset}`);
+      }
+    }
+  };
+
+  // 处理测试订单提交
+  const handleTestSubmit = async () => {
+    try {
+      setIsTestLoading(true);
+      validateOrder();
+
+      await spotTrading.createTestOrder(
+        currentUser?.id,
+        selectedPair.symbol,
+        orderSide,
+        orderType,
+        amount,
+        orderType === 'LIMIT' ? price : undefined
+      );
+
+      // 测试订单成功
+      alert('测试订单验证通过！');
+    } catch (error: any) {
+      console.error('Test order failed:', error);
+      alert(error.message || '测试订单失败');
+    } finally {
+      setIsTestLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setIsLoading(true);
+      validateOrder();
+
+      await spotTrading.createOrder(
+        currentUser?.id,
+        selectedPair.symbol,
+        orderSide,
+        orderType,
+        amount,
+        orderType === 'LIMIT' ? price : undefined
+      );
+
+      // 清空表单
+      setAmount('');
+      setPrice('');
+      setTotal('');
+
+      // 刷新数据
+      await onRefreshData();
+
+      // 下单成功提示
+      alert('下单成功！');
+    } catch (error: any) {
+      console.error('Place order failed:', error);
+      alert(error.message || '下单失败');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -160,10 +232,8 @@ const TradingForm: React.FC<TradingFormProps> = ({
                     id="total"
                     placeholder="0.00"
                     value={total}
-                    onChange={(e) => setTotal(e.target.value)}
+                    disabled
                     type="number"
-                    step={1 / Math.pow(10, selectedPair.quoteAssetPrecision || 8)} 
-                    min="0"
                   />
                 </div>
               </div>
@@ -183,7 +253,9 @@ const TradingForm: React.FC<TradingFormProps> = ({
                     value={amount}
                     onChange={handleAmountChange}
                     type="number"
-                    step={selectedPair.limitOrder?.stepSize}
+                    step={orderSide === 'BUY' 
+                      ? 1 / Math.pow(10, selectedPair.quoteAssetPrecision || 8)
+                      : selectedPair.limitOrder?.stepSize}
                     min={orderSide === 'BUY' 
                       ? selectedPair.marketOrder?.minNotional
                       : selectedPair.limitOrder?.minQty}
@@ -196,14 +268,23 @@ const TradingForm: React.FC<TradingFormProps> = ({
               </div>
             </TabsContent>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-2">
               <Button 
                 className="w-full" 
-                disabled={isLoading || !amount || (orderType === 'LIMIT' && !price)}
+                variant="outline"
+                disabled={isTestLoading || !amount || (orderType === 'LIMIT' && !price)}
+                onClick={handleTestSubmit}
+              >
+                {isTestLoading ? <Loading size="sm" text="测试中..." /> : '测试下单'}
+              </Button>
+
+              <Button 
+                className="w-full" 
+                disabled={isLoading || externalLoading || !amount || (orderType === 'LIMIT' && !price)}
                 onClick={handleSubmit}
                 variant={orderSide === 'BUY' ? 'default' : 'destructive'}
               >
-                {isLoading ? <Loading size="sm" text="提交中..." /> : (
+                {isLoading || externalLoading ? <Loading size="sm" text="提交中..." /> : (
                   orderSide === 'BUY' 
                     ? `买入 ${selectedPair.baseAsset}` 
                     : `卖出 ${selectedPair.baseAsset}`
