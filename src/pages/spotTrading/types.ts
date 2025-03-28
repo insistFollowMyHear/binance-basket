@@ -31,6 +31,10 @@ export interface MarketPair {
     minNotional: string;
     maxNotional: string;
   };
+  priceFilter?: {
+    maxPricePercent: string;  // 最大价格偏差百分比
+    minPricePercent: string;  // 最小价格偏差百分比
+  };
 }
 
 export interface UserAccount {

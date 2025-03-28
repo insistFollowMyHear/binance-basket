@@ -110,6 +110,38 @@ const TradingForm: React.FC<TradingFormProps> = ({
         throw new Error(`最小交易金额为 ${minNotional} ${selectedPair.quoteAsset}`);
       }
     }
+
+    // 验证价格偏差（仅限价单需要验证）
+    if (orderType === 'LIMIT' && selectedPair.priceFilter) {
+      const currentPrice = parseFloat(selectedPair.lastPrice);
+      const orderPrice = parseFloat(price);
+      
+      if (currentPrice <= 0) {
+        throw new Error('无法获取当前市场价格，请稍后重试');
+      }
+
+      if (orderSide === 'BUY') {
+        const maxPrice = currentPrice * parseFloat(selectedPair.priceFilter.maxPricePercent);
+        const minPrice = currentPrice * parseFloat(selectedPair.priceFilter.minPricePercent);
+        
+        if (orderPrice > maxPrice) {
+          throw new Error(`买入价格不能高于当前价格的 ${(parseFloat(selectedPair.priceFilter.maxPricePercent) * 100 - 100).toFixed(2)}%`);
+        }
+        if (orderPrice < minPrice) {
+          throw new Error(`买入价格不能低于当前价格的 ${(100 - parseFloat(selectedPair.priceFilter.minPricePercent) * 100).toFixed(2)}%`);
+        }
+      } else {
+        const maxPrice = currentPrice * parseFloat(selectedPair.priceFilter.maxPricePercent);
+        const minPrice = currentPrice * parseFloat(selectedPair.priceFilter.minPricePercent);
+        
+        if (orderPrice > maxPrice) {
+          throw new Error(`卖出价格不能高于当前价格的 ${(parseFloat(selectedPair.priceFilter.maxPricePercent) * 100 - 100).toFixed(2)}%`);
+        }
+        if (orderPrice < minPrice) {
+          throw new Error(`卖出价格不能低于当前价格的 ${(100 - parseFloat(selectedPair.priceFilter.minPricePercent) * 100).toFixed(2)}%`);
+        }
+      }
+    }
   };
 
   // 处理测试订单提交
@@ -211,6 +243,13 @@ const TradingForm: React.FC<TradingFormProps> = ({
                     type="number"
                     step={1 / Math.pow(10, selectedPair.quoteAssetPrecision || 8)} 
                   />
+                  {selectedPair.priceFilter && selectedPair.lastPrice !== '0.00' && (
+                    <div className="text-xs text-muted-foreground">
+                      当前价格: {selectedPair.lastPrice} {selectedPair.quoteAsset}
+                      <br />
+                      价格范围: {(parseFloat(selectedPair.lastPrice) * parseFloat(selectedPair.priceFilter.minPricePercent)).toFixed(selectedPair.quoteAssetPrecision)} ~ {(parseFloat(selectedPair.lastPrice) * parseFloat(selectedPair.priceFilter.maxPricePercent)).toFixed(selectedPair.quoteAssetPrecision)} {selectedPair.quoteAsset}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-2">

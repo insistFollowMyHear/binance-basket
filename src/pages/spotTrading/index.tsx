@@ -107,25 +107,37 @@ export function SpotTrade() {
     );
     
     // 转换为 MarketPair 格式并保存最小交易数量信息
-    const formattedPairs = activeSymbols.map((symbol: any): MarketPair => ({
-      symbol: symbol.symbol,
-      baseAsset: symbol.baseAsset,
-      quoteAsset: symbol.quoteAsset,
-      lastPrice: '0.00',
-      priceChangePercent: '0.00',
-      baseAssetPrecision: symbol.baseAssetPrecision || 0,
-      quoteAssetPrecision: symbol.quoteAssetPrecision || 0,
-      limitOrder: {
-        minQty: symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE')?.minQty || '0',
-        maxQty: symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE')?.maxQty || '0',
-        stepSize: symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE')?.stepSize || '0'
-      },
-      marketOrder: {
-        minNotional: symbol.filters.find((f: any) => f.filterType === "NOTIONAL")?.minNotional || '0',
-        maxNotional: symbol.filters.find((f: any) => f.filterType === "NOTIONAL")?.maxNotional || '0'
-      }
-    }));
-
+    const formattedPairs = activeSymbols.map((symbol: any): MarketPair => {
+      // 获取订单尺寸
+      const orderSize = symbol.filters.find((f: any) => f.filterType === 'LOT_SIZE');
+      // 获取名义过滤器
+      const notionalFilter = symbol.filters.find((f: any) => f.filterType === "NOTIONAL");
+      // 获取价格过滤器
+      const priceFilter = symbol.filters.find((f: any) => f.filterType === 'PERCENT_PRICE_BY_SIDE');
+      
+      return {
+        symbol: symbol.symbol,
+        baseAsset: symbol.baseAsset,
+        quoteAsset: symbol.quoteAsset,
+        lastPrice: symbol.lastPrice || '0.00',
+        priceChangePercent: '0.00',
+        baseAssetPrecision: symbol.baseAssetPrecision || 0,
+        quoteAssetPrecision: symbol.quoteAssetPrecision || 0,
+        limitOrder: {
+          minQty: orderSize?.minQty || '0',
+          maxQty: orderSize?.maxQty || '0',
+          stepSize: orderSize?.stepSize || '0'
+        },
+        marketOrder: {
+          minNotional: notionalFilter?.minNotional || '0',
+          maxNotional: notionalFilter?.maxNotional || '0'
+        },
+        priceFilter: priceFilter ? {
+          maxPricePercent: priceFilter.bidMultiplierUp || '1.2',    // 买入价格上限倍数
+          minPricePercent: priceFilter.bidMultiplierDown || '0.8',  // 买入价格下限倍数
+        } : undefined
+      };
+    });
     setMarketPairs(formattedPairs);
     setFilteredPairs(formattedPairs);
 
