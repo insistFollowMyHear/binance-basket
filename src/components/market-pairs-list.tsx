@@ -1,92 +1,64 @@
-import React from 'react';
-import { FixedSizeList as List } from 'react-window';
-import { SelectItem } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-
-interface MarketPair {
-  symbol: string;
-  baseAsset: string;
-  quoteAsset: string;
-  lastPrice: string;
-  priceChangePercent: string;
-}
+import React, { RefObject } from 'react';
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { MarketPair } from '@/pages/spotTrading/types';
 
 interface MarketPairsListProps {
   pairs: MarketPair[];
   searchQuery: string;
   onSearch: (value: string) => void;
   onSelect: (symbol: string) => void;
+  searchInputRef?: RefObject<HTMLInputElement>;
 }
-
-const ITEM_HEIGHT = 40;
-const SEARCH_HEIGHT = 48;
-const LIST_HEIGHT = 300;
 
 const MarketPairsList: React.FC<MarketPairsListProps> = ({
   pairs,
   searchQuery,
   onSearch,
   onSelect,
+  searchInputRef
 }) => {
-  // 渲染单个交易对项
-  const Row = React.memo(({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const pair = pairs[index];
-    return (
-      <div style={style}>
-        <SelectItem
-          key={pair.symbol}
-          value={pair.symbol}
-          className="cursor-pointer"
-          onClick={() => onSelect(pair.symbol)}
-        >
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{pair.baseAsset}</span>
-              <span className="text-muted-foreground">/</span>
-              <span>{pair.quoteAsset}</span>
-            </div>
-            {pair.lastPrice !== '0.00' && (
-              <span className={
-                parseFloat(pair.priceChangePercent) > 0 
-                  ? "text-green-500" 
-                  : "text-red-500"
-              }>
-                {pair.lastPrice}
-              </span>
-            )}
-          </div>
-        </SelectItem>
-      </div>
-    );
-  });
-
   return (
-    <div className="px-3 py-2">
-      <div className="mb-2">
+    <div className="w-full">
+      <div className="p-2">
         <Input
+          ref={searchInputRef}
+          type="text"
           placeholder="搜索交易对..."
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
-          className="h-8"
+          className="w-full"
         />
       </div>
-      {pairs.length === 0 ? (
-        <div className="py-6 text-center text-sm text-muted-foreground">
-          未找到交易对
+      <ScrollArea className="h-[300px]">
+        <div className="space-y-1 p-2">
+          {pairs.map((pair) => (
+            <button
+              key={pair.symbol}
+              onClick={() => onSelect(pair.symbol)}
+              className="flex items-center justify-between w-full p-2 text-sm rounded-md hover:bg-accent"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-bold">{pair.baseAsset}</span>
+                <span className="text-muted-foreground">/</span>
+                <span>{pair.quoteAsset}</span>
+              </div>
+              <div className="text-right">
+                <div>{pair.lastPrice}</div>
+                <div className={`text-xs ${
+                  parseFloat(pair.priceChangePercent) >= 0 
+                    ? 'text-green-500' 
+                    : 'text-red-500'
+                }`}>
+                  {parseFloat(pair.priceChangePercent) >= 0 ? '+' : ''}{pair.priceChangePercent}%
+                </div>
+              </div>
+            </button>
+          ))}
         </div>
-      ) : (
-        <List
-          height={LIST_HEIGHT}
-          itemCount={pairs.length}
-          itemSize={ITEM_HEIGHT}
-          width="100%"
-          className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
-        >
-          {Row}
-        </List>
-      )}
+      </ScrollArea>
     </div>
   );
 };
 
-export default React.memo(MarketPairsList); 
+export default MarketPairsList; 

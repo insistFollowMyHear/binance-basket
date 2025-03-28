@@ -374,14 +374,14 @@ export function Header() {
                             <span>{account.nickname}</span>
                           </div>
                           <div className="flex items-center space-x-1">
-                            <Button
+                            {/* <Button
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6"
                               onClick={() => openEditDialog(account)}
                             >
                               <Edit className="h-3 w-3" />
-                            </Button>
+                            </Button> */}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button

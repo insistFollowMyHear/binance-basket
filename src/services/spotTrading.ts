@@ -1,75 +1,51 @@
+import { get, post } from '@/utils/request';
 import { baseUrl } from './config'
 
 export const spotTrading = {
   // 获取当前用户现货账户信息
   getUserAccount: async (binanceUserId: string): Promise<any> => {
-    const response = await fetch(`${baseUrl}/api/spot/account?id=${binanceUserId}`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch user account data')
-    }
-    return response.json()
+    return get(`${baseUrl}/api/spot/account`, { id: binanceUserId });
   },
 
   // 获取交易对
   getSymbols: async (binanceUserId: string): Promise<any> => {
-    const response = await fetch(`${baseUrl}/api/spot/symbols?id=${binanceUserId}`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch symbols')
-    }
-    return response.json()
+    return get(`${baseUrl}/api/spot/symbols`, { id: binanceUserId });
   },
 
   // 用户当前挂单
   getOpenOrders: async (binanceUserId: string, symbol: string): Promise<any> => {
-    const response = await fetch(`${baseUrl}/api/spot/openOrders?id=${binanceUserId}&symbol=${symbol}`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch open orders')
-    }
-    return response.json()
+    return get(`${baseUrl}/api/spot/openOrders`, { id: binanceUserId, symbol });
   },
 
   // 用户所有订单
-  getAllOrders: async ( binanceUserId: string, symbol: string): Promise<any> => {
-    const response = await fetch(`${baseUrl}/api/spot/allOrders?id=${binanceUserId}&symbol=${symbol}`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch all orders')
-    }
-    return response.json()
+  getAllOrders: async (binanceUserId: string, symbol: string): Promise<any> => {
+    return get(`${baseUrl}/api/spot/allOrders`, { id: binanceUserId, symbol });
+  },
+
+  // 撤销订单
+  cancelOrder: async (binanceUserId: string, symbol: string, orderId: number): Promise<any> => {
+    return post(`${baseUrl}/api/spot/cancelOrder?id=${binanceUserId}`, {
+      symbol,
+      orderId
+    });
+  },
+
+  // 撤销所有订单
+  cancelAllOrders: async (binanceUserId: string, symbol: string): Promise<any> => {
+    return post(`${baseUrl}/api/spot/cancelAllOrders?id=${binanceUserId}`, {
+      symbol
+    });
   },
 
   // 下单测试
   testOrder: async (binanceUserId: string, symbol: string, side: string, quantity: number, price: number, type: string): Promise<any> => {
-    const response = await fetch(`${baseUrl}/api/spot/testOrder?id=${binanceUserId}&symbol=${symbol}&side=${side}&quantity=${quantity}&price=${price}&type=${type}`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch test order')
-    }
-    return response.json()
-  },
-
-  // // 获取市场深度
-  // getDepth: async (symbol: string, limit: number = 50, userId: string): Promise<any> => {
-  //   const response = await fetch(`${baseUrl}/api/spot/depth?symbol=${symbol}&limit=${limit}&userId=${userId}`)
-  //   if (!response.ok) {
-  //     throw new Error('Failed to fetch depth data')
-  //   }
-  //   return response.json()
-  // },
-
-  // // 获取市场近期交易
-  // getTrades: async (symbol: string, limit: number = 50, userId: string): Promise<any> => {
-  //   const response = await fetch(`${baseUrl}/api/spot/trades?symbol=${symbol}&limit=${limit}&userId=${userId}`)
-  //   if (!response.ok) {
-  //     throw new Error('Failed to fetch trades data')
-  //   }
-  //   return response.json()
-  // },
-
-  // // 获取市场最新价格
-  // getTickerPrice: async (symbol: string, userId: string): Promise<any> => {
-  //   const response = await fetch(`${baseUrl}/api/spot/ticker/price?symbol=${symbol}&userId=${userId}`)
-  //   if (!response.ok) {
-  //     throw new Error('Failed to fetch price data')
-  //   }
-  //   return response.json()
-  // }
+    return get(`${baseUrl}/api/spot/testOrder`, {
+      id: binanceUserId,
+      symbol,
+      side,
+      quantity,
+      price,
+      type
+    });
+  }
 } 

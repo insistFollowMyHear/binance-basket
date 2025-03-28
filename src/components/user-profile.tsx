@@ -29,12 +29,12 @@ export function UserProfile() {
       const { balances = [] } = binanceUserAccount.data
       // 只统计有余额的资产
       const balanceList = balances
-        // .filter((balance: any) => balance.free !== '0' || balance.locked !== '0')
-        // .map((balance: any) => ({
-        //   asset: balance.asset,
-        //   free: balance.free,
-        //   locked: balance.locked
-        // }))
+        .filter((balance: any) => Number(balance.free) !== 0 || Number(balance.locked) !== 0)
+        .map((balance: any) => ({
+          asset: balance.asset,
+          free: balance.free,
+          locked: balance.locked
+        }))
       setAccountAssets(balanceList)
       // 计算总资产价值
       const total = balanceList.reduce((sum: number, asset: any) => sum + Number(asset.free) + Number(asset.locked), 0)

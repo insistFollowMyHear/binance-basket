@@ -3,7 +3,7 @@ export * from './trading-form';
 
 export type OrderType = 'LIMIT' | 'MARKET';
 export type OrderSide = 'BUY' | 'SELL';
-export type OrderStatus = 'FILLED' | 'CANCELED' | 'NEW';
+export type OrderStatus = 'FILLED' | 'CANCELED' | 'NEW' | 'PARTIALLY_FILLED';
 
 // 交易对
 export interface MarketPair {
