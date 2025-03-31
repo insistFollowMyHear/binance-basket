@@ -10,6 +10,7 @@ import {
 import { RefreshCw } from "lucide-react";
 
 import { spotTrading } from '@/services';
+import ws, { WSData } from '@/services/ws';
 
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store/store';
@@ -69,14 +70,38 @@ export function SpotTrade() {
 
   const { currentUser } = useSelector((state: RootState) => state.auth);
 
+
   // 加载数据
   useEffect(() => {
     if (!currentUser?.id) return;
     if (loadedRef.current) return;
     loadedRef.current = true;
+    
     getSymbols();
     getUserAccount();
-  }, [currentUser?.id]);
+
+    console.log('selectedPair', selectedPair);
+
+    // 订阅市场数据
+    const unsubscribeMarket = ws.subscribeMarket(
+      selectedPair.symbol,
+      ['avgPrice'],
+      (data: WSData) => {
+        if (data.type === 'market_stream' && data.symbol === selectedPair.symbol) {
+          console.log('Received market data:', data);
+          // const { data: { data: { s, e } } } = data;
+          // 处理市场数据
+        }
+      }
+    );
+
+    console.log('unsubscribeMarket', unsubscribeMarket);
+
+    // 清理函数
+    return () => {
+      unsubscribeMarket();
+    };
+  }, [currentUser?.id, selectedPair.symbol]);
 
   // 获取用户资产
   const getUserAccount = async () => {
