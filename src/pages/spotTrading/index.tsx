@@ -1,34 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState } from '@/store/store';
+import { setSelectedPair as setReduxSelectedPair } from '@/store/slices/tradingSlice';
 
-import { Button } from "@/components/ui/button";
+// import { RefreshCw } from "lucide-react";
+// import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { RefreshCw } from "lucide-react";
+
+import { Loading } from '@/components/ui/loading'
+import MarketPairsList from '@/components/market-pairs-list';
+
+import MarketData from './components/market-data';
+import TradingForm from './components/trading-form';
+import OrderHistory from './components/order-history';
 
 import { spotTrading } from '@/services';
 import ws, { WSData } from '@/services/ws';
 
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '@/store/store';
-import { setSelectedPair as setReduxSelectedPair } from '@/store/slices/tradingSlice';
-import MarketPairsList from '@/components/market-pairs-list';
-import OrderHistory from './components/order-history';
-import MarketData from './components/market-data';
-import TradingForm from './components/trading-form';
 import { MarketPair, UserAccount } from './types';
 
 const STORAGE_KEY = 'selectedTradingPair';
 
 export function SpotTrade() {
-  const dispatch = useDispatch();
   const loadedRef = useRef(false);
+  const dispatch = useDispatch();
+
+  // const [isRefreshing, setIsRefreshing] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [isLoading, _setIsLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedPair, setSelectedPair] = useState<MarketPair>(() => {
     // 从 localStorage 读取保存的交易对
     const savedPair = localStorage.getItem(STORAGE_KEY);
@@ -59,19 +62,16 @@ export function SpotTrade() {
       }
     };
   });
-  const [userAccount, setUserAccount] = useState<UserAccount>({
-    baseAsset: 0,
-    quoteAsset: 0
-  });
-
+  const [userAccount, setUserAccount] = useState<UserAccount>({ baseAsset: 0, quoteAsset: 0 });
+  const [pageLoading, setPageLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [marketPairs, setMarketPairs] = useState<MarketPair[]>([]);
   const [filteredPairs, setFilteredPairs] = useState<MarketPair[]>([]);
   const [streamsInfo, setStreamsInfo] = useState<any>({});
 
+  const unsubscribeMarket = useRef<any>(null);
   const { currentUser } = useSelector((state: RootState) => state.auth);
-
-
+  
   // 加载数据
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -80,9 +80,10 @@ export function SpotTrade() {
     
     getSymbols();
     getUserAccount();
+    getAvgPrice();
 
     // 订阅市场数据
-    const unsubscribeMarket = ws.subscribeMarket(
+    const _unsubscribeMarket = ws.subscribeMarket(
       selectedPair.symbol,
       ['avgPrice'],
       (data: WSData) => {
@@ -95,12 +96,14 @@ export function SpotTrade() {
         }
       }
     );
+    unsubscribeMarket.current = _unsubscribeMarket;
 
-    // 清理函数
+    // // 清理函数
     return () => {
-      unsubscribeMarket();
+      unsubscribeMarket.current();
+      unsubscribeMarket.current = null;
     };
-  }, [currentUser?.id, selectedPair.symbol]);
+  }, [currentUser?.id]);
 
   // 获取用户资产
   const getUserAccount = async () => {
@@ -119,6 +122,20 @@ export function SpotTrade() {
       baseAsset: _baseAsset,
       quoteAsset: _quoteAsset
     });
+  };
+
+  // 获取当前均价
+  const getAvgPrice = async () => {
+    setPageLoading(true);
+    try {
+      const res = await spotTrading.getAvgPrice(currentUser?.id, selectedPair.symbol);
+      setStreamsInfo({
+        ...streamsInfo,
+        w: res.data.price
+      });
+    } finally {
+      setPageLoading(false);
+    }
   };
 
   // 获取交易对
@@ -198,23 +215,50 @@ export function SpotTrade() {
       dispatch(setReduxSelectedPair(selected as any));
       // 更新用户资产
       getUserAccount();
+      // 更新当前均价
+      getAvgPrice();
+      // 取消订阅市场数据
+      if (unsubscribeMarket.current) {
+        unsubscribeMarket.current();
+        unsubscribeMarket.current = null;
+      }
+      // 订阅市场数据
+      const _unsubscribeMarket = ws.subscribeMarket(
+        selected.symbol,
+        ['avgPrice'],
+        (data: WSData) => {
+          if (data.type === 'market_stream' && data.symbol === selected.symbol) {
+            const { data: info } = data;
+            // 处理市场数据
+            if (info?.s === selected.symbol) {
+              setStreamsInfo(info);
+            }
+          }
+        }
+      );
+      unsubscribeMarket.current = _unsubscribeMarket;
     }
   };
 
   // 刷新数据
   const refreshData = async () => {
-    setIsRefreshing(true);
+    // setIsRefreshing(true);
     try {
       await Promise.all([
         getSymbols(),
-        getUserAccount()
+        getUserAccount(),
+        getAvgPrice()
       ]);
     } catch (error) {
       console.error('Failed to refresh data:', error);
     } finally {
-      setIsRefreshing(false);
+      // setIsRefreshing(false);
     }
   };
+
+  if (pageLoading) {
+    return <Loading className="h-96" />
+  }
 
   return (
     <div className="container mx-auto p-4 space-y-4">
@@ -262,7 +306,7 @@ export function SpotTrade() {
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+        {/* <div className="flex items-center space-x-2">
           <Button 
             variant="outline" 
             size="sm" 
@@ -273,7 +317,7 @@ export function SpotTrade() {
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? '刷新中' : '刷新'}
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {/* 主要内容 */}
@@ -282,7 +326,6 @@ export function SpotTrade() {
         <TradingForm
           currentUser={currentUser}
           selectedPair={selectedPair}
-          isLoading={isLoading}
           userAccount={userAccount}
           onRefreshData={refreshData}
           streamsInfo={streamsInfo}

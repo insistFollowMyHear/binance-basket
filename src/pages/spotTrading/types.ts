@@ -50,7 +50,6 @@ export interface OrderHistoryProps {
 export interface TradingFormProps {
   currentUser: any;
   selectedPair: MarketPair;
-  isLoading: boolean;
   userAccount: UserAccount;
   streamsInfo: any;
   onRefreshData: () => Promise<void>;

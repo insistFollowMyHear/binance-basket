@@ -15,7 +15,6 @@ import {
 const TradingForm: React.FC<TradingFormProps> = ({
   currentUser,
   selectedPair,
-  isLoading: externalLoading,
   streamsInfo,
   onRefreshData
 }) => {
@@ -125,9 +124,6 @@ const TradingForm: React.FC<TradingFormProps> = ({
         const maxPrice = currentPrice * parseFloat(selectedPair.priceFilter.maxPricePercent);
         const minPrice = currentPrice * parseFloat(selectedPair.priceFilter.minPricePercent);
 
-        console.log('maxPrice', maxPrice, selectedPair.priceFilter.maxPricePercent);
-        console.log('minPrice', minPrice, selectedPair.priceFilter.minPricePercent);
-        
         if (orderPrice > maxPrice) {
           throw new Error(`买入价格不能高于当前价格的 ${(parseFloat(selectedPair.priceFilter.maxPricePercent) * 100 - 100).toFixed(2)}%`);
         }
@@ -144,6 +140,14 @@ const TradingForm: React.FC<TradingFormProps> = ({
         if (orderPrice < minPrice) {
           throw new Error(`卖出价格不能低于当前价格的 ${(100 - parseFloat(selectedPair.priceFilter.minPricePercent) * 100).toFixed(2)}%`);
         }
+      }
+
+      if (parseFloat(total) < parseFloat(selectedPair.marketOrder?.minNotional || '0')) {
+        throw new Error(`最小交易金额为 ${selectedPair.marketOrder?.minNotional} ${selectedPair.quoteAsset}`);
+      }
+  
+      if (parseFloat(total) > parseFloat(selectedPair.marketOrder?.maxNotional || '0')) {
+        throw new Error(`最大交易金额为 ${selectedPair.marketOrder?.maxNotional} ${selectedPair.quoteAsset}`);
       }
     }
   };
@@ -323,11 +327,11 @@ const TradingForm: React.FC<TradingFormProps> = ({
 
               <Button 
                 className="w-full" 
-                disabled={isLoading || externalLoading || !amount || (orderType === 'LIMIT' && !price)}
+                disabled={isLoading || !amount || (orderType === 'LIMIT' && !price)}
                 onClick={handleSubmit}
                 variant={orderSide === 'BUY' ? 'default' : 'destructive'}
               >
-                {isLoading || externalLoading ? <Loading size="sm" text="提交中..." /> : (
+                {isLoading ? <Loading size="sm" text="提交中..." /> : (
                   orderSide === 'BUY' 
                     ? `买入 ${selectedPair.baseAsset}` 
                     : `卖出 ${selectedPair.baseAsset}`
