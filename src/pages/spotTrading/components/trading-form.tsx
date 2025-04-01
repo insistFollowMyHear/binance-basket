@@ -16,6 +16,7 @@ const TradingForm: React.FC<TradingFormProps> = ({
   currentUser,
   selectedPair,
   isLoading: externalLoading,
+  streamsInfo,
   onRefreshData
 }) => {
   const [orderType, setOrderType] = useState<OrderType>('LIMIT');
@@ -113,7 +114,7 @@ const TradingForm: React.FC<TradingFormProps> = ({
 
     // 验证价格偏差（仅限价单需要验证）
     if (orderType === 'LIMIT' && selectedPair.priceFilter) {
-      const currentPrice = parseFloat(selectedPair.lastPrice);
+      const currentPrice = parseFloat(streamsInfo?.w);
       const orderPrice = parseFloat(price);
       
       if (currentPrice <= 0) {
@@ -123,6 +124,9 @@ const TradingForm: React.FC<TradingFormProps> = ({
       if (orderSide === 'BUY') {
         const maxPrice = currentPrice * parseFloat(selectedPair.priceFilter.maxPricePercent);
         const minPrice = currentPrice * parseFloat(selectedPair.priceFilter.minPricePercent);
+
+        console.log('maxPrice', maxPrice, selectedPair.priceFilter.maxPricePercent);
+        console.log('minPrice', minPrice, selectedPair.priceFilter.minPricePercent);
         
         if (orderPrice > maxPrice) {
           throw new Error(`买入价格不能高于当前价格的 ${(parseFloat(selectedPair.priceFilter.maxPricePercent) * 100 - 100).toFixed(2)}%`);

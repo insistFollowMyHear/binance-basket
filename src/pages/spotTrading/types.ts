@@ -52,5 +52,6 @@ export interface TradingFormProps {
   selectedPair: MarketPair;
   isLoading: boolean;
   userAccount: UserAccount;
+  streamsInfo: any;
   onRefreshData: () => Promise<void>;
 } 

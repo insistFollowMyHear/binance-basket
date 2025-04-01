@@ -67,6 +67,7 @@ export function SpotTrade() {
   const [searchQuery, setSearchQuery] = useState('');
   const [marketPairs, setMarketPairs] = useState<MarketPair[]>([]);
   const [filteredPairs, setFilteredPairs] = useState<MarketPair[]>([]);
+  const [streamsInfo, setStreamsInfo] = useState<any>({});
 
   const { currentUser } = useSelector((state: RootState) => state.auth);
 
@@ -80,22 +81,20 @@ export function SpotTrade() {
     getSymbols();
     getUserAccount();
 
-    console.log('selectedPair', selectedPair);
-
     // 订阅市场数据
     const unsubscribeMarket = ws.subscribeMarket(
       selectedPair.symbol,
       ['avgPrice'],
       (data: WSData) => {
         if (data.type === 'market_stream' && data.symbol === selectedPair.symbol) {
-          console.log('Received market data:', data);
-          // const { data: { data: { s, e } } } = data;
+          const { data: info } = data;
           // 处理市场数据
+          if (info?.s === selectedPair.symbol) {
+            setStreamsInfo(info);
+          }
         }
       }
     );
-
-    console.log('unsubscribeMarket', unsubscribeMarket);
 
     // 清理函数
     return () => {
@@ -257,7 +256,8 @@ export function SpotTrade() {
               </Select>
               <div className="flex text-sm text-muted-foreground">
                 <div className="mr-10">最小交易数量: {selectedPair.limitOrder?.minQty} {selectedPair.baseAsset}</div>
-                <div>最小交易额: {selectedPair.marketOrder?.minNotional} {selectedPair.quoteAsset}</div>
+                <div className="mr-10">最小交易额: {selectedPair.marketOrder?.minNotional} {selectedPair.quoteAsset}</div>
+                <div>当前均价: {streamsInfo?.w}</div>
               </div>
             </div>
           </div>
@@ -285,6 +285,7 @@ export function SpotTrade() {
           isLoading={isLoading}
           userAccount={userAccount}
           onRefreshData={refreshData}
+          streamsInfo={streamsInfo}
         />
 
         {/* 市场数据 */}
