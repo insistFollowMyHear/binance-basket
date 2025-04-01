@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loading } from '@/components/ui/loading';
 import { spotTrading } from '@/services/spotTrading';
+import { useToast } from "@/hooks/use-toast";
+
 import {
   OrderType,
   OrderSide,
@@ -18,6 +20,7 @@ const TradingForm: React.FC<TradingFormProps> = ({
   streamsInfo,
   onRefreshData
 }) => {
+  const { toast } = useToast();
   const [orderType, setOrderType] = useState<OrderType>('LIMIT');
   const [orderSide, setOrderSide] = useState<OrderSide>('BUY');
   const [price, setPrice] = useState('');
@@ -167,11 +170,15 @@ const TradingForm: React.FC<TradingFormProps> = ({
         orderType === 'LIMIT' ? price : undefined
       );
 
-      // 测试订单成功
-      alert('测试订单验证通过！');
+      toast({
+        title: '测试订单验证通过！',
+      });
     } catch (error: any) {
       console.error('Test order failed:', error);
-      alert(error.message || '测试订单失败');
+      toast({
+        title: '测试订单失败',
+        description: error.message || '测试订单失败',
+      });
     } finally {
       setIsTestLoading(false);
     }
@@ -199,11 +206,15 @@ const TradingForm: React.FC<TradingFormProps> = ({
       // 刷新数据
       await onRefreshData();
 
-      // 下单成功提示
-      alert('下单成功！');
+      toast({
+        title: '下单成功！',
+      });
     } catch (error: any) {
       console.error('Place order failed:', error);
-      alert(error.message || '下单失败');
+      toast({
+        title: '下单失败',
+        description: error.message || '下单失败',
+      });
     } finally {
       setIsLoading(false);
     }

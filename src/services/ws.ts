@@ -192,6 +192,16 @@ class WebSocketService {
 
     return this.subscribe(key, callback, subscribeMessage);
   }
+
+  // 关闭连接
+  public close(): void {
+    this.ws?.close();
+  }
+
+  // 开始连接
+  public start(): void {
+    this.connect();
+  }
 }
 
 // 创建并导出单例
