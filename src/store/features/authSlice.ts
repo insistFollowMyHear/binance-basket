@@ -5,6 +5,7 @@ interface AuthState {
   isAuthenticated: boolean
   loading: boolean
   currentUser: any | null
+  currentUserRestrictions: any | null
 }
 
 const initialState: AuthState = {
@@ -12,6 +13,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   loading: false,
   currentUser: null,
+  currentUserRestrictions: null
 }
 
 export const authSlice = createSlice({
@@ -25,6 +27,9 @@ export const authSlice = createSlice({
     },
     setCurrentUser: (state, action: PayloadAction<any>) => {
       state.currentUser = action.payload
+    },
+    setCurrentUserRestrictions: (state, action: PayloadAction<any>) => {
+      state.currentUserRestrictions = action.payload
     },
     logout: (state) => {
       // 清除Supabase特定的认证token
@@ -59,5 +64,5 @@ export const authSlice = createSlice({
   },
 })
 
-export const { setUser, logout, setLoading, setCurrentUser } = authSlice.actions
+export const { setUser, logout, setLoading, setCurrentUser, setCurrentUserRestrictions } = authSlice.actions
 export default authSlice.reducer

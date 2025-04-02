@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from "react-redux"
 import { RootState } from "../store/store"
 import { logout } from "../store/features/authSlice"
 import { setCurrentUser } from "../store/features/authSlice"
+import { setCurrentUserRestrictions } from "../store/features/authSlice"
 
 import { ThemeToggle } from "./theme-toggle"
 import {
@@ -42,7 +43,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import { LogOut, User, Plus, ChevronDown, Trash2 } from "lucide-react"
 
 import { BinanceUser } from "../services/config"
-import { binanceUsers, userPreferences, auth } from "../services"
+import { binanceUsers, userPreferences, auth, wallet } from "../services"
 
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "../hooks/useLoading"
@@ -60,6 +61,7 @@ export function Header() {
   
   const [binanceAccounts, setBinanceAccounts] = useState<BinanceUser[]>([])
   const [currentBinanceUser, setCurrentBinanceUser] = useState<BinanceUser | null>(null)
+  const [currentBinanceUserRestrictions, setCurrentBinanceUserRestrictions] = useState<any | null>(null)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -101,11 +103,21 @@ export function Header() {
           await userPreferences.updateCurrentBinanceUserId(user.id, accounts[0].id)
         }
       }
+      loadApiRestrictions(preference?.current_binance_user_id || accounts[0].id)
     } catch (error) {
       console.error("加载Binance账户失败:", error)
     }
   }
 
+  const loadApiRestrictions = async (binanceUserId: string) => {
+    try {
+      const restrictions = await wallet.getApiRestrictions(binanceUserId)
+      setCurrentBinanceUserRestrictions(restrictions.data)
+      dispatch(setCurrentUserRestrictions(restrictions.data))
+    } catch (error) {
+      console.error('获取API限制失败:', error)
+    }
+  }
   const handleLogout = async () => {
     try {
       // 先调用Supabase的退出登录方法（包含完整的清理）
@@ -231,7 +243,11 @@ export function Header() {
         setAddDialogOpen(false)
       } catch (error) {
         console.error('添加用户失败:', error)
-        alert('添加用户失败，请重试')
+        toast({
+          title: '添加用户失败',
+          description: '请重试',
+          variant: 'destructive'
+        })
       }
     }, '添加账户中...')
   }
@@ -256,6 +272,11 @@ export function Header() {
       }
     } catch (error) {
       console.error('删除用户失败:', error)
+      toast({
+        title: '删除用户失败',
+        description: '请重试',
+        variant: 'destructive'
+      })
     } finally {
       hideLoading()
       setIsDeleting(false)
@@ -274,49 +295,57 @@ export function Header() {
 
             <NavigationMenu>
               <NavigationMenuList>
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-foreground">
-                    交易
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <ul className="grid w-[200px] gap-3 p-4 bg-background">
-                      <li>
-                        <Link
-                          to="/spot"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground"
-                        >
-                          <div className="text-sm font-medium leading-none">现货交易</div>
-                        </Link>
-                      </li>
-                    </ul>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
+                {
+                  currentBinanceUserRestrictions?.enableSpotAndMarginTrading && (
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger className="text-foreground">
+                        交易
+                      </NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <ul className="grid w-[200px] gap-3 p-4 bg-background">
+                          <li>
+                            <Link
+                              to="/spot"
+                              className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground"
+                            >
+                              <div className="text-sm font-medium leading-none">现货交易</div>
+                            </Link>
+                          </li>
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+                  )
+                }
 
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-foreground">
-                    合约
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <ul className="grid w-[200px] gap-3 p-4 bg-background">
-                      <li>
-                        <Link
-                          to="/futures/usdt"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground"
-                        >
-                          <div className="text-sm font-medium leading-none">U本位合约</div>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          to="/futures/coin"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground"
-                        >
-                          <div className="text-sm font-medium leading-none">币本位合约</div>
-                        </Link>
-                      </li>
-                    </ul>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
+                {
+                  currentBinanceUserRestrictions?.enableFutures && (
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger className="text-foreground">
+                        合约
+                      </NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <ul className="grid w-[200px] gap-3 p-4 bg-background">
+                          <li>
+                            <Link
+                              to="/futures/usdt"
+                              className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground"
+                            >
+                              <div className="text-sm font-medium leading-none">U本位合约</div>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              to="/futures/coin"
+                              className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground"
+                            >
+                              <div className="text-sm font-medium leading-none">币本位合约</div>
+                            </Link>
+                          </li>
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+                  )
+                }
               </NavigationMenuList>
             </NavigationMenu>
           </div>
