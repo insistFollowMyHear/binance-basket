@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
-// import { RefreshCw } from "lucide-react";
-// import { Button } from "@/components/ui/button";
+
 import {
   Select,
   SelectContent,
@@ -25,6 +24,8 @@ import {
   useSelectedPair,
   useUserAccount
 } from './hooks';
+
+import { NoData } from '@/components/NoData';
 
 export function SpotTrade() {
   const loadedRef = useRef(false);
@@ -114,6 +115,10 @@ export function SpotTrade() {
 
   if (isPairsLoading || isPriceLoading || isAccountLoading) {
     return <Loading className="h-96" />
+  }
+
+  if (!currentUser?.id) {
+    return <NoData />
   }
 
   return (

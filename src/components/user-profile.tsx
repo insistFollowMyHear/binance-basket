@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react'
+
 import { useSelector } from 'react-redux'
 import { RootState } from '../store/store'
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+
 import { Wallet } from 'lucide-react'
 import { Loading } from './ui/loading'
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+
 import { spotTrading } from '../services/spotTrading'
+
+import { NoData } from './NoData'
+
 interface AssetBalance {
   asset: string
   free: string
@@ -54,16 +60,7 @@ export function UserProfile() {
 
   if (!currentUser?.id) {
     return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="py-10">
-            <div className="text-center text-muted-foreground">
-              <p>您还没有选择 Binance 账户</p>
-              <p className="text-sm mt-2">请在顶部导航栏添加或选择一个账户</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <NoData />
     )
   }
 

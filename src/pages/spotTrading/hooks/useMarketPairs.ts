@@ -5,13 +5,12 @@ import { MarketPair } from '../types';
 export function useMarketPairs(userId?: string) {
   const [marketPairs, setMarketPairs] = useState<MarketPair[]>([]);
   const [filteredPairs, setFilteredPairs] = useState<MarketPair[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(userId ? true : false);
 
   // 获取交易对
   const getSymbols = useCallback(async () => {
     if (!userId) return;
     
-    setIsLoading(true);
     try {
       const res = await spotTrading.getSymbols(userId);
       // 过滤掉已暂停的交易对

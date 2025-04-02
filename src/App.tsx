@@ -9,6 +9,7 @@ import { Profile } from './pages/Profile'
 import { RequireAuth } from './components/RequireAuth'
 import { useSelector } from 'react-redux'
 import { RootState } from './store/store'
+import { Toaster } from './components/ui/toaster'
 
 // 路由定义为中心化的配置，更方便管理
 const publicRoutes = [
@@ -41,6 +42,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {isAuthenticated && <Header />}
+      <Toaster />
       <Routes>
         {/* 公开路由 */}
         {publicRoutes.map(route => (

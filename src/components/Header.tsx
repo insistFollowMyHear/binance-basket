@@ -1,11 +1,19 @@
-import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuTrigger } from "./ui/navigation-menu"
+import { useEffect, useState, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { ThemeToggle } from "./theme-toggle"
 import { useSelector, useDispatch } from "react-redux"
+
 import { RootState } from "../store/store"
 import { logout } from "../store/features/authSlice"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
-import { Button } from "./ui/button"
+import { setCurrentUser } from "../store/features/authSlice"
+
+import { ThemeToggle } from "./theme-toggle"
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuList,
+  NavigationMenuTrigger
+} from "./ui/navigation-menu"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,32 +22,45 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
-import { LogOut, User, Plus, ChevronDown, Trash2, Edit } from "lucide-react"
-import { useEffect, useState } from "react"
-import { binanceUsers, userPreferences, auth } from "../services"
-import { BinanceUser } from "../services/config"
-import { useRef } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "./ui/alert-dialog"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog"
-import { useLoading } from "../hooks/useLoading"
-import { setCurrentUser } from "../store/features/authSlice"
-import { spotTrading } from "../services/spotTrading"
+import { Button } from "./ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+
+import { LogOut, User, Plus, ChevronDown, Trash2 } from "lucide-react"
+
+import { BinanceUser } from "../services/config"
+import { binanceUsers, userPreferences, auth } from "../services"
+
 import { useToast } from "@/hooks/use-toast";
+import { useLoading } from "../hooks/useLoading"
+import { spotTrading } from "../services/spotTrading"
 
 export function Header() {
-  const loadedRef = useRef(false)
-  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth)
   const dispatch = useDispatch()
   const navigate = useNavigate()
+
+  const loadedRef = useRef(false)
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth)
+
+  const { toast } = useToast()
   const { withLoading, showLoading, hideLoading } = useLoading()
   
   const [binanceAccounts, setBinanceAccounts] = useState<BinanceUser[]>([])
   const [currentBinanceUser, setCurrentBinanceUser] = useState<BinanceUser | null>(null)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<BinanceUser | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   // 表单状态
@@ -48,8 +69,6 @@ export function Header() {
   const [secretKey, setSecretKey] = useState('')
   const [avatar, setAvatar] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-
-  const { toast } = useToast()
 
   useEffect(() => {
     if (isAuthenticated && user && !loadedRef.current) {
@@ -149,7 +168,6 @@ export function Header() {
     setSecretKey('')
     setAvatar(null)
     setAvatarPreview(null)
-    setEditingUser(null)
   }
 
   // 通过账户信息检查用户是否存在
@@ -178,7 +196,7 @@ export function Header() {
       })
       return
     }
-    
+
     withLoading(async () => {
       try {
         let avatarUrl = ''
@@ -204,6 +222,8 @@ export function Header() {
         if (binanceAccounts.length === 0) {
           setCurrentBinanceUser(newUser)
           await userPreferences.updateCurrentBinanceUserId(user.id, newUser.id)
+          // 刷新页面
+          window.location.reload()
         }
         
         // 重置表单和关闭对话框
@@ -214,48 +234,6 @@ export function Header() {
         alert('添加用户失败，请重试')
       }
     }, '添加账户中...')
-  }
-
-  // 编辑账户
-  const handleEditUser = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!editingUser) return
-    
-    withLoading(async () => {
-      try {
-        let avatarUrl = editingUser.avatar_url || ''
-        
-        // 如果有新头像，上传
-        if (avatar) {
-          avatarUrl = await binanceUsers.uploadAvatar(user.id, avatar)
-        }
-        
-        // 更新用户
-        const updatedUser = await binanceUsers.update(editingUser.id, {
-          nickname: name,
-          api_key: apiKey,
-          secret_key: secretKey,
-          avatar_url: avatarUrl || undefined
-        })
-        
-        // 更新状态
-        setBinanceAccounts(
-          binanceAccounts.map(acc => (acc.id === updatedUser.id ? updatedUser : acc))
-        )
-        
-        if (currentBinanceUser?.id === updatedUser.id) {
-          setCurrentBinanceUser(updatedUser)
-        }
-        
-        // 重置表单和关闭对话框
-        resetForm()
-        setEditDialogOpen(false)
-      } catch (error) {
-        console.error('更新用户失败:', error)
-        alert('更新用户失败，请重试')
-      }
-    }, '更新账户中...')
   }
 
   // 删除账户
@@ -283,16 +261,6 @@ export function Header() {
       setIsDeleting(false)
     }
   }
-
-  // 打开编辑对话框
-  // const openEditDialog = (user: BinanceUser) => {
-  //   setEditingUser(user)
-  //   setName(user.nickname)
-  //   setApiKey(user.api_key)
-  //   setSecretKey(user.secret_key)
-  //   setAvatarPreview(user.avatar_url || null)
-  //   setEditDialogOpen(true)
-  // }
 
   return (
     <header className="w-full bg-background border-b border-border">
@@ -407,14 +375,6 @@ export function Header() {
                             <span>{account.nickname}</span>
                           </div>
                           <div className="flex items-center space-x-1">
-                            {/* <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => openEditDialog(account)}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button> */}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -515,7 +475,12 @@ export function Header() {
       </div>
 
       {/* Add Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+      <Dialog open={addDialogOpen} onOpenChange={(open) => {
+        setAddDialogOpen(open)
+        if (!open) {
+          resetForm()
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>添加 Binance 账户</DialogTitle>
@@ -528,10 +493,13 @@ export function Header() {
                   {avatarPreview ? (
                     <AvatarImage src={avatarPreview} />
                   ) : (
-                    <AvatarFallback>+</AvatarFallback>
+                    <AvatarFallback>
+                      <User className="h-4 w-4" />
+                    </AvatarFallback>
                   )}
                 </Avatar>
                 <Input
+                  className="cursor-pointer"
                   id="avatar"
                   type="file"
                   accept="image/*"
@@ -583,82 +551,6 @@ export function Header() {
                 取消
               </Button>
               <Button type="submit">添加</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>编辑 Binance 账户</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleEditUser} className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-avatar">头像</Label>
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  {avatarPreview ? (
-                    <AvatarImage src={avatarPreview} />
-                  ) : (
-                    <AvatarFallback>
-                      {editingUser ? getInitials(editingUser.nickname) : '+'}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-                <Input
-                  id="edit-avatar"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">名称</Label>
-              <Input
-                id="edit-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-apiKey">API Key</Label>
-              <Input
-                id="edit-apiKey"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-secretKey">Secret Key</Label>
-              <Input
-                id="edit-secretKey"
-                type="password"
-                value={secretKey}
-                onChange={(e) => setSecretKey(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  resetForm()
-                  setEditDialogOpen(false)
-                }}
-              >
-                取消
-              </Button>
-              <Button type="submit">保存</Button>
             </div>
           </form>
         </DialogContent>
