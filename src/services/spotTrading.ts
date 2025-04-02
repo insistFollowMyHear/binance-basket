@@ -3,8 +3,12 @@ import { baseUrl } from './config'
 
 export const spotTrading = {
   // 获取当前用户现货账户信息
-  getUserAccount: async (binanceUserId: string): Promise<any> => {
-    return get(`${baseUrl}/api/spot/account`, { id: binanceUserId });
+  getUserAccount: async (binanceUserId: string, apiKey?: string, secretKey?: string): Promise<any> => {
+    if (apiKey && secretKey) {
+      return get(`${baseUrl}/api/spot/account`, { api_key: apiKey, secret_key: secretKey });
+    } else {
+      return get(`${baseUrl}/api/spot/account`, { id: binanceUserId });
+    }
   },
 
   // 获取交易对

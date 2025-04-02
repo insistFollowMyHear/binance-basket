@@ -25,6 +25,8 @@ import { Label } from "./ui/label"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog"
 import { useLoading } from "../hooks/useLoading"
 import { setCurrentUser } from "../store/features/authSlice"
+import { spotTrading } from "../services/spotTrading"
+import { useToast } from "@/hooks/use-toast";
 
 export function Header() {
   const loadedRef = useRef(false)
@@ -46,6 +48,8 @@ export function Header() {
   const [secretKey, setSecretKey] = useState('')
   const [avatar, setAvatar] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+
+  const { toast } = useToast()
 
   useEffect(() => {
     if (isAuthenticated && user && !loadedRef.current) {
@@ -148,9 +152,32 @@ export function Header() {
     setEditingUser(null)
   }
 
+  // 通过账户信息检查用户是否存在
+  const checkUserExists = async () => {
+    let isRealUser: Boolean = false
+    try {
+      await spotTrading.getUserAccount('', apiKey, secretKey)
+      isRealUser = true
+    } catch(err) {
+      console.error('检查用户是否存在失败:', err)
+      isRealUser = false
+    }
+    return isRealUser
+  }
+
   // 添加账户
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const isRealUser = await checkUserExists()
+    if (!isRealUser) {
+      toast({
+        title: '用户不存在',
+        description: '请检查API Key和Secret Key是否正确',
+        variant: 'destructive'
+      })
+      return
+    }
     
     withLoading(async () => {
       try {
@@ -258,14 +285,14 @@ export function Header() {
   }
 
   // 打开编辑对话框
-  const openEditDialog = (user: BinanceUser) => {
-    setEditingUser(user)
-    setName(user.nickname)
-    setApiKey(user.api_key)
-    setSecretKey(user.secret_key)
-    setAvatarPreview(user.avatar_url || null)
-    setEditDialogOpen(true)
-  }
+  // const openEditDialog = (user: BinanceUser) => {
+  //   setEditingUser(user)
+  //   setName(user.nickname)
+  //   setApiKey(user.api_key)
+  //   setSecretKey(user.secret_key)
+  //   setAvatarPreview(user.avatar_url || null)
+  //   setEditDialogOpen(true)
+  // }
 
   return (
     <header className="w-full bg-background border-b border-border">
@@ -332,7 +359,7 @@ export function Header() {
             {isAuthenticated ? (
               <div className="flex items-center space-x-2">
                 {/* Binance 账户切换 */}
-                {binanceAccounts.length > 0 && (
+                {binanceAccounts.length > 0 ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-9 gap-1">
@@ -359,6 +386,12 @@ export function Header() {
                         <DropdownMenuItem
                           key={account.id}
                           className="flex items-center justify-between"
+                          onSelect={(e) => {
+                            // 如果点击的是删除按钮，阻止 DropdownMenu 关闭
+                            if ((e.target as HTMLElement).closest('.delete-btn')) {
+                              e.preventDefault();
+                            }
+                          }}
                         >
                           <div
                             className="flex items-center flex-1 cursor-pointer"
@@ -387,7 +420,8 @@ export function Header() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-6 w-6 text-destructive"
+                                  className="h-6 w-6 text-destructive delete-btn"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
@@ -402,7 +436,10 @@ export function Header() {
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>取消</AlertDialogCancel>
                                   <AlertDialogAction
-                                    onClick={() => handleDeleteUser(account.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteUser(account.id);
+                                    }}
                                     disabled={isDeleting}
                                   >
                                     {isDeleting ? "删除中..." : "确认删除"}
@@ -420,6 +457,11 @@ export function Header() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                ) : (
+                  <Button variant="outline" size="sm" className="h-9 gap-1"  onClick={() => setAddDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    <span>添加账户</span>
+                  </Button>
                 )}
 
                 {/* 用户菜单 */}

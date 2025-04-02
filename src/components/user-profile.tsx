@@ -20,6 +20,8 @@ export function UserProfile() {
   useEffect(() => {
     if (currentUser?.id) {
       loadUserAccount()
+    } else {
+      setLoading(false)
     }
   }, [currentUser])
 
