@@ -1,5 +1,5 @@
 export interface MarketData {
-  type: 'market_data' | 'market_stream';
+  type: 'market_stream_open' | 'market_stream_message';
   symbol: string;
   data: any;
 }
@@ -32,6 +32,7 @@ class WebSocketService {
   private readonly reconnectInterval = 3000;  // 重连间隔
   private pingInterval: number | null = null;  // 心跳间隔
   private isConnecting = false;  // 是否连接中
+  private isManualClosed = false; // 新增：标记是否为主动关闭
 
   constructor() {
     if (WebSocketService.instance) {
@@ -43,7 +44,7 @@ class WebSocketService {
   }
 
   private connect(): void {
-    if (this.isConnecting || (this.ws?.readyState === WebSocket.OPEN)) {
+    if (this.isConnecting || (this.ws?.readyState === WebSocket.OPEN) || this.isManualClosed) {
       return;
     }
 
@@ -80,12 +81,19 @@ class WebSocketService {
       }
     };
 
-    this.ws.onclose = () => {
-      console.log('WebSocket disconnected');
+    this.ws.onclose = (event: CloseEvent) => {
+      console.log('WebSocket disconnected', event);
       this.isConnecting = false;
       this.cleanup();
-      this.tryReconnect();
-      this.messageHandlers.clear();
+      
+      // 只有在非主动关闭的情况下才尝试重连
+      if (!this.isManualClosed) {
+        console.log('Connection lost unexpectedly, attempting to reconnect...');
+        this.tryReconnect();
+      } else {
+        console.log('Connection closed manually, no reconnection needed');
+        this.messageHandlers.clear();
+      }
     };
 
     this.ws.onerror = (error: Event) => {
@@ -115,7 +123,7 @@ class WebSocketService {
     const { type='', payload={ symbol: '', streams: [] } } = subscribeMessage || {};
     if (type === 'subscribe_market') {
       this.ws?.send(JSON.stringify({
-        type: 'unsubscribe',
+        type: 'unsubscribe_market',
         payload: {
           symbol: payload.symbol,
           streams: payload.streams
@@ -195,15 +203,16 @@ class WebSocketService {
 
   // 关闭连接
   public close(): void {
+    this.isManualClosed = true; // 设置主动关闭标记
     this.ws?.close();
   }
 
   // 开始连接
   public start(): void {
+    this.isManualClosed = false; // 重置主动关闭标记
     this.connect();
   }
 }
 
 // 创建并导出单例
-const ws = new WebSocketService();
-export default ws;
+export default WebSocketService;

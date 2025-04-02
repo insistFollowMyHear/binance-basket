@@ -42,8 +42,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 
 import { LogOut, User, Plus, ChevronDown, Trash2 } from "lucide-react"
 
-import { BinanceUser } from "../services/config"
-import { binanceUsers, userPreferences, auth, wallet } from "../services"
+import WebSocketService from "../services/ws"
+import { binanceUsers, userPreferences, auth, wallet, BinanceUser } from "../services"
 
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "../hooks/useLoading"
@@ -72,9 +72,13 @@ export function Header() {
   const [avatar, setAvatar] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
+  const [ws, setWs] = useState<WebSocketService | null>(null)
+
   useEffect(() => {
     if (isAuthenticated && user && !loadedRef.current) {
+      showLoading('加载中...')
       loadBinanceAccounts()
+      setWs(new WebSocketService())
       loadedRef.current = true
     }
   }, [isAuthenticated, user])
@@ -84,7 +88,6 @@ export function Header() {
       // 加载用户的Binance账户
       const accounts = await binanceUsers.getByUserId(user.id)
       setBinanceAccounts(accounts)
-
       // 加载用户偏好
       const preference = await userPreferences.getByUserId(user.id)
       if (preference?.current_binance_user_id && accounts.length > 0) {
@@ -106,6 +109,8 @@ export function Header() {
       loadApiRestrictions(preference?.current_binance_user_id || accounts[0].id)
     } catch (error) {
       console.error("加载Binance账户失败:", error)
+    } finally {
+      hideLoading()
     }
   }
 
@@ -125,7 +130,10 @@ export function Header() {
       
       // 然后更新Redux状态
       dispatch(logout())
-      
+
+      // 关闭所有WebSocket连接
+      ws?.close()
+
       // 短暂延迟确保所有清理操作都已完成
       setTimeout(() => {
         // 重定向到登录页面
