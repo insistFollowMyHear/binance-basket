@@ -7,6 +7,7 @@ import { Register } from './pages/Register'
 import { SpotTrade } from './pages/spotTrading/index'
 import { Profile } from './pages/Profile'
 import { RequireAuth } from './components/RequireAuth'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import { useSelector } from 'react-redux'
 import { RootState } from './store/store'
 import { Toaster } from './components/ui/toaster'
@@ -18,9 +19,25 @@ const publicRoutes = [
 ]
 
 const protectedRoutes = [
-  { path: '/profile', element: <Profile /> },
-  // 添加其他需要身份验证的路由
-  { path: '/spot', element: <SpotTrade /> }
+  { 
+    path: '/profile', 
+    element: <Profile /> 
+  },
+  { 
+    path: '/spot', 
+    element: <SpotTrade />,
+    requireSpotTrading: true
+  },
+  {
+    path: '/futures/usdt',
+    element: <div>U本位合约</div>,
+    requireFutures: true
+  },
+  {
+    path: '/futures/coin',
+    element: <div>币本位合约</div>,
+    requireFutures: true
+  }
 ]
 
 // 应用入口组件，包含路由表和Redux Provider
@@ -54,7 +71,16 @@ function AppContent() {
           <Route
             key={route.path}
             path={route.path}
-            element={<RequireAuth>{route.element}</RequireAuth>}
+            element={
+              <RequireAuth>
+                <ProtectedRoute
+                  requireSpotTrading={route.requireSpotTrading}
+                  requireFutures={route.requireFutures}
+                >
+                  {route.element}
+                </ProtectedRoute>
+              </RequireAuth>
+            }
           />
         ))}
         
