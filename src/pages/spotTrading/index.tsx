@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
+import eventEmitter from '@/utils/eventEmitter';
 
 import {
   Select,
@@ -101,6 +102,7 @@ export function SpotTrade() {
         getUserAccount(selectedPair),
         // getAvgPrice()
       ]);
+      eventEmitter.emit('loadChildOrderHistory');
     } catch (error) {
       console.error('Failed to refresh data:', error);
     }

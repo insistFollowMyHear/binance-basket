@@ -3,6 +3,8 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loading } from '@/components/ui/loading';
 import { Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import eventEmitter from '@/utils/eventEmitter';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +38,16 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
     // 切换交易对或视图模式时，重置页码
     setCurrentPage(1);
   }, [currentUser?.id, selectedPair.symbol, viewMode]);
+
+  useEffect(() => {
+    eventEmitter.on('loadChildOrderHistory', () => {
+      loadOrders();
+    });
+
+    return () => {
+      eventEmitter.off('loadChildOrderHistory', loadOrders);
+    };
+  }, []);
 
   // 加载订单数据
   const loadOrders = async () => {
