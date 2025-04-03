@@ -260,12 +260,13 @@ const TradingForm: React.FC<TradingFormProps> = ({
       await onRefreshData();
 
       toast({
-        title: '下单成功！',
+        title: '下单成功！'
       });
     } catch (error: any) {
       console.error('Place order failed:', error);
       toast({
         title: '下单失败',
+        variant: 'destructive',
         description: error.message || '下单失败',
       });
     } finally {

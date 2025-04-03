@@ -40,7 +40,7 @@ export function SpotTrade() {
     avgPrice,
     isLoading: isPriceLoading,
     handlePairSelect: onPairSelect,
-    getAvgPrice
+    // getAvgPrice
   } = useSelectedPair(currentUser?.id);
 
   const {
@@ -53,7 +53,6 @@ export function SpotTrade() {
 
   const {
     userAccount,
-    isLoading: isAccountLoading,
     getUserAccount
   } = useUserAccount(currentUser?.id);
 
@@ -98,9 +97,9 @@ export function SpotTrade() {
   const refreshData = async () => {
     try {
       await Promise.all([
-        getSymbols(),
+        // getSymbols(),
         getUserAccount(selectedPair),
-        getAvgPrice()
+        // getAvgPrice()
       ]);
     } catch (error) {
       console.error('Failed to refresh data:', error);
@@ -113,7 +112,7 @@ export function SpotTrade() {
     handleSearch(value);
   };
 
-  if (isPairsLoading || isPriceLoading || isAccountLoading) {
+  if (isPairsLoading || isPriceLoading) {
     return <Loading className="h-96" />
   }
 
