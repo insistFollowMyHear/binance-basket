@@ -11,7 +11,7 @@ export interface UserData {
 }
 
 export type WSData = MarketData | UserData;
-export type MessageHandler = (data: WSData) => void;
+export type MessageHandler = (data: WSData) => void | Promise<void>;
 
 interface SubscribeMessage {
   type: string;
@@ -26,14 +26,16 @@ class WebSocketService {
   private static instance: WebSocketService | null = null;
   private ws: WebSocket | null = null;
   private readonly url: string = 'ws://52.194.218.184:3001';
-  // private messageHandlers = new Map<string, MessageHandler>();  // 消息处理函数
-  private messageCallback: MessageHandler | null = null;
-  private reconnectAttempts = 0;  // 重连次数
-  private readonly maxReconnectAttempts = 5;  // 最大重连次数
-  private readonly reconnectInterval = 3000;  // 重连间隔
-  private pingInterval: number | null = null;  // 心跳间隔
-  private isConnecting = false;  // 是否连接中
-  private isManualClosed = false; // 新增：标记是否为主动关闭
+  private messageHandlers = new Map<string, MessageHandler>();
+  private reconnectAttempts = 0;
+  private readonly maxReconnectAttempts = 5;
+  private readonly reconnectInterval = 3000;
+  private readonly maxSubscriptions = 100; // 添加订阅上限
+  private pingInterval: number | null = null;
+  private isConnecting = false;
+  private isManualClosed = false;
+  private messageQueue: WSData[] = []; // 添加消息队列
+  private isProcessing = false; // 消息处理状态标记
 
   constructor() {
     if (WebSocketService.instance) {
@@ -42,6 +44,26 @@ class WebSocketService {
 
     WebSocketService.instance = this;
     this.connect();
+  }
+
+  private async processMessageQueue(): Promise<void> {
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+    
+    while (this.messageQueue.length > 0) {
+      const data = this.messageQueue.shift();
+      if (!data) continue;
+
+      for (const handler of this.messageHandlers.values()) {
+        try {
+          await Promise.resolve(handler(data));
+        } catch (error) {
+          console.error('Handler execution error:', error);
+        }
+      }
+    }
+    
+    this.isProcessing = false;
   }
 
   private connect(): void {
@@ -57,12 +79,16 @@ class WebSocketService {
       this.isConnecting = false;
       this.reconnectAttempts = 0;
       this.startHeartbeat();
+      
+      // 重新订阅所有数据
+      this.resubscribeAll();
     };
 
     this.ws.onmessage = (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data) as WSData;
-        this.messageCallback && this.messageCallback(data);
+        this.messageQueue.push(data);
+        this.processMessageQueue();
       } catch (error) {
         console.error('Failed to parse message:', error);
       }
@@ -79,7 +105,8 @@ class WebSocketService {
         this.tryReconnect();
       } else {
         console.log('Connection closed manually, no reconnection needed');
-        // this.messageHandlers.clear();
+        this.messageHandlers.clear();
+        this.messageQueue = []; // 清空消息队列
       }
     };
 
@@ -89,21 +116,55 @@ class WebSocketService {
     };
   }
 
-  // 订阅
+  // 重新订阅所有数据
+  private async resubscribeAll(): Promise<void> {
+    const entries = Array.from(this.messageHandlers.entries());
+    const batchSize = 10;
+    
+    for (let i = 0; i < entries.length; i += batchSize) {
+      const batch = entries.slice(i, i + batchSize);
+      await Promise.all(batch.map(([key, handler]) => {
+        const [type, ...params] = key.split('-');
+        if (type === 'market') {
+          const [symbol, streams] = params;
+          return this.subscribeMarket(symbol, streams.split('&'), handler);
+        } else if (type === 'user') {
+          const [userId] = params;
+          return this.subscribeUserData(userId, handler);
+        }
+      }));
+      // 添加延迟，避免短时间内发送过多请求
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
   private subscribe(key: string, messageHandler: MessageHandler, subscribeMessage?: SubscribeMessage): () => void {
-    this.messageCallback = messageHandler;
+    if (this.messageHandlers.size >= this.maxSubscriptions) {
+      throw new Error(`Max subscription limit (${this.maxSubscriptions}) reached`);
+    }
+
+    if (this.messageHandlers.has(key)) {
+      this.unsubscribe(key);
+    }
+
+    this.messageHandlers.set(key, messageHandler);
 
     if (subscribeMessage && this.ws?.readyState === WebSocket.OPEN) {
       this.send(subscribeMessage);
     }
-    return () => this.unsubscribe(key, subscribeMessage);
+
+    return () => {
+      this.unsubscribe(key, subscribeMessage);
+    };
   }
 
   // 取消订阅
   private unsubscribe(key: string, subscribeMessage?: SubscribeMessage): void {
+    this.messageHandlers.delete(key);
+
     const { type='', payload={ symbol: '', streams: [] } } = subscribeMessage || {};
-    if (type === 'subscribe_market') {
-      this.ws?.send(JSON.stringify({
+    if (type === 'subscribe_market' && this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
         type: 'unsubscribe_market',
         payload: {
           symbol: payload.symbol,
@@ -116,7 +177,11 @@ class WebSocketService {
   // 发送消息
   private send(message: SubscribeMessage): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
+      try {
+        this.ws.send(JSON.stringify(message));
+      } catch (error) {
+        console.error('Failed to send message:', error);
+      }
     } else {
       console.warn('WebSocket is not connected');
     }
@@ -143,6 +208,8 @@ class WebSocketService {
   // 清理连接
   private cleanup(): void {
     this.stopHeartbeat();
+    this.isProcessing = false;
+    this.messageQueue = [];
   }
 
   // 尝试重新连接
@@ -185,6 +252,7 @@ class WebSocketService {
   // 关闭连接
   public close(): void {
     this.isManualClosed = true; // 设置主动关闭标记
+    this.cleanup();
     this.ws?.close();
   }
 

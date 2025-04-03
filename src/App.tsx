@@ -28,16 +28,16 @@ const protectedRoutes = [
     element: <SpotTrade />,
     requireSpotTrading: true
   },
-  {
-    path: '/futures/usdt',
-    element: <div>U本位合约</div>,
-    requireFutures: true
-  },
-  {
-    path: '/futures/coin',
-    element: <div>币本位合约</div>,
-    requireFutures: true
-  }
+  // {
+  //   path: '/futures/usdt',
+  //   element: <div>U本位合约</div>,
+  //   requireFutures: true
+  // },
+  // {
+  //   path: '/futures/coin',
+  //   element: <div>币本位合约</div>,
+  //   requireFutures: true
+  // }
 ]
 
 // 应用入口组件，包含路由表和Redux Provider
@@ -75,7 +75,7 @@ function AppContent() {
               <RequireAuth>
                 <ProtectedRoute
                   requireSpotTrading={route.requireSpotTrading}
-                  requireFutures={route.requireFutures}
+                  // requireFutures={route.requireFutures}
                 >
                   {route.element}
                 </ProtectedRoute>
