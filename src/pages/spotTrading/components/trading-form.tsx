@@ -90,27 +90,46 @@ const TradingForm: React.FC<TradingFormProps> = ({
 
   // 验证订单
   const validateOrder = () => {
+    let isError = false;
     if (!amount) {
-      throw new Error('请输入数量');
+      isError = true;
+      toast({
+        title: '请输入数量',
+        variant: 'destructive'
+      })
     }
 
     if (orderType === 'LIMIT' && !price) {
-      throw new Error('限价单请输入价格');
+      isError = true;
+      toast({
+        title: '限价单请输入价格',
+        variant: 'destructive'
+      })
     }
 
     // 验证最小交易数量
     const minQty = parseFloat(selectedPair.limitOrder?.minQty || '0');
     if (orderType === 'LIMIT' || (orderType === 'MARKET' && orderSide === 'SELL')) {
       if (parseFloat(amount) < minQty) {
-        throw new Error(`最小交易数量为 ${minQty} ${selectedPair.baseAsset}`);
+        isError = true;
+        toast({
+          title: '最小交易数量为',
+          description: `${minQty} ${selectedPair.baseAsset}`,
+          variant: 'destructive'
+        })
       }
     }
 
     // 验证最小名义价值
     const minNotional = parseFloat(selectedPair.marketOrder?.minNotional || '0');
     if (orderType === 'MARKET' && orderSide === 'BUY') {
-      if (parseFloat(amount) < minNotional) {
-        throw new Error(`最小交易金额为 ${minNotional} ${selectedPair.quoteAsset}`);
+      if (parseFloat(amount) * parseFloat(streamsInfo?.w) < minNotional) {
+        isError = true;
+        toast({
+          title: '最小交易金额为',
+          description: `${minNotional} ${selectedPair.quoteAsset}`,
+          variant: 'destructive'
+        })
       }
     }
 
@@ -120,7 +139,11 @@ const TradingForm: React.FC<TradingFormProps> = ({
       const orderPrice = parseFloat(price);
       
       if (currentPrice <= 0) {
-        throw new Error('无法获取当前市场价格，请稍后重试');
+        isError = true;
+        toast({
+          title: '无法获取当前市场价格，请稍后重试',
+          variant: 'destructive'
+        })
       }
 
       if (orderSide === 'BUY') {
@@ -128,38 +151,68 @@ const TradingForm: React.FC<TradingFormProps> = ({
         const minPrice = currentPrice * parseFloat(selectedPair.priceFilter.minPricePercent);
 
         if (orderPrice > maxPrice) {
-          throw new Error(`买入价格不能高于当前价格的 ${(parseFloat(selectedPair.priceFilter.maxPricePercent) * 100 - 100).toFixed(2)}%`);
+          isError = true;
+          toast({
+            title: `买入价格不能高于当前价格的 ${(parseFloat(selectedPair.priceFilter.maxPricePercent) * 100 - 100).toFixed(2)}%`,
+            variant: 'destructive'
+          })
         }
+
         if (orderPrice < minPrice) {
-          throw new Error(`买入价格不能低于当前价格的 ${(100 - parseFloat(selectedPair.priceFilter.minPricePercent) * 100).toFixed(2)}%`);
+          isError = true;
+          toast({
+            title: `买入价格不能低于当前价格的 ${(100 - parseFloat(selectedPair.priceFilter.minPricePercent) * 100).toFixed(2)}%`,
+            variant: 'destructive'
+          })
         }
       } else {
         const maxPrice = currentPrice * parseFloat(selectedPair.priceFilter.maxPricePercent);
         const minPrice = currentPrice * parseFloat(selectedPair.priceFilter.minPricePercent);
         
         if (orderPrice > maxPrice) {
-          throw new Error(`卖出价格不能高于当前价格的 ${(parseFloat(selectedPair.priceFilter.maxPricePercent) * 100 - 100).toFixed(2)}%`);
+          isError = true;
+          toast({
+            title: `卖出价格不能高于当前价格的 ${(parseFloat(selectedPair.priceFilter.maxPricePercent) * 100 - 100).toFixed(2)}%`,
+            variant: 'destructive'
+          })
         }
+
         if (orderPrice < minPrice) {
-          throw new Error(`卖出价格不能低于当前价格的 ${(100 - parseFloat(selectedPair.priceFilter.minPricePercent) * 100).toFixed(2)}%`);
+          isError = true;
+          toast({
+            title: `卖出价格不能低于当前价格的 ${(100 - parseFloat(selectedPair.priceFilter.minPricePercent) * 100).toFixed(2)}%`,
+            variant: 'destructive'
+          })
         }
       }
 
       if (parseFloat(total) < parseFloat(selectedPair.marketOrder?.minNotional || '0')) {
-        throw new Error(`最小交易金额为 ${selectedPair.marketOrder?.minNotional} ${selectedPair.quoteAsset}`);
+        isError = true;
+        toast({
+          title: `最小交易金额为 ${selectedPair.marketOrder?.minNotional} ${selectedPair.quoteAsset}`,
+          variant: 'destructive'
+        })
       }
   
       if (parseFloat(total) > parseFloat(selectedPair.marketOrder?.maxNotional || '0')) {
-        throw new Error(`最大交易金额为 ${selectedPair.marketOrder?.maxNotional} ${selectedPair.quoteAsset}`);
+        isError = true;
+        toast({
+          title: `最大交易金额为 ${selectedPair.marketOrder?.maxNotional} ${selectedPair.quoteAsset}`,
+          variant: 'destructive'
+        })
       }
     }
+
+    return isError;
   };
 
   // 处理测试订单提交
   const handleTestSubmit = async () => {
     try {
       setIsTestLoading(true);
-      validateOrder();
+      const isValid = validateOrder();
+      if (isValid) return;
+      console.log('isValid', isValid);
 
       await spotTrading.createTestOrder(
         currentUser?.id,
