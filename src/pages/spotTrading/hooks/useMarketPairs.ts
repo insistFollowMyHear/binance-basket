@@ -7,8 +7,7 @@ export function useMarketPairs(userId?: string) {
   const [filteredPairs, setFilteredPairs] = useState<MarketPair[]>([]);
   const [isLoading, setIsLoading] = useState(userId ? true : false);
 
-  // 获取交易对
-  const getSymbols = useCallback(async () => {
+  const getSymbols = async () => {
     if (!userId) return;
     
     try {
@@ -61,7 +60,7 @@ export function useMarketPairs(userId?: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  };
 
   // 处理交易对搜索
   const handleSearch = useCallback((value: string) => {

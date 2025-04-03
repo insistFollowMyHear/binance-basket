@@ -26,7 +26,8 @@ class WebSocketService {
   private static instance: WebSocketService | null = null;
   private ws: WebSocket | null = null;
   private readonly url: string = 'ws://52.194.218.184:3001';
-  private messageHandlers = new Map<string, MessageHandler>();  // 消息处理函数
+  // private messageHandlers = new Map<string, MessageHandler>();  // 消息处理函数
+  private messageCallback: MessageHandler | null = null;
   private reconnectAttempts = 0;  // 重连次数
   private readonly maxReconnectAttempts = 5;  // 最大重连次数
   private readonly reconnectInterval = 3000;  // 重连间隔
@@ -56,26 +57,12 @@ class WebSocketService {
       this.isConnecting = false;
       this.reconnectAttempts = 0;
       this.startHeartbeat();
-      
-      // 重新订阅所有数据
-      this.messageHandlers.forEach((handler, key) => {
-        const [type, ...params] = key.split('-');
-        if (type === 'market') {
-          const [symbol, streams] = params;
-          this.subscribeMarket(symbol, streams.split('&'), handler);
-        } else if (type === 'user') {
-          const [userId] = params;
-          this.subscribeUserData(userId, handler);
-        }
-      });
     };
 
     this.ws.onmessage = (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data) as WSData;
-        this.messageHandlers.forEach(handler => {
-          handler(data);
-        });
+        this.messageCallback && this.messageCallback(data);
       } catch (error) {
         console.error('Failed to parse message:', error);
       }
@@ -92,7 +79,7 @@ class WebSocketService {
         this.tryReconnect();
       } else {
         console.log('Connection closed manually, no reconnection needed');
-        this.messageHandlers.clear();
+        // this.messageHandlers.clear();
       }
     };
 
@@ -104,11 +91,7 @@ class WebSocketService {
 
   // 订阅
   private subscribe(key: string, messageHandler: MessageHandler, subscribeMessage?: SubscribeMessage): () => void {
-    if (this.messageHandlers.has(key)) {
-      this.unsubscribe(key);
-    }
-
-    this.messageHandlers.set(key, messageHandler);
+    this.messageCallback = messageHandler;
 
     if (subscribeMessage && this.ws?.readyState === WebSocket.OPEN) {
       this.send(subscribeMessage);
@@ -118,8 +101,6 @@ class WebSocketService {
 
   // 取消订阅
   private unsubscribe(key: string, subscribeMessage?: SubscribeMessage): void {
-    this.messageHandlers.delete(key);
-
     const { type='', payload={ symbol: '', streams: [] } } = subscribeMessage || {};
     if (type === 'subscribe_market') {
       this.ws?.send(JSON.stringify({
