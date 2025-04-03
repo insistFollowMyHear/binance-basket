@@ -12,7 +12,7 @@ import {
 import { Loading } from '@/components/ui/loading'
 import MarketPairsList from '@/components/market-pairs-list';
 
-import MarketData from './components/market-data';
+// import MarketData from './components/market-data';
 import TradingForm from './components/trading-form';
 import OrderHistory from './components/order-history';
 

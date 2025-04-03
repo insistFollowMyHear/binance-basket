@@ -221,71 +221,75 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4">时间</th>
-                    <th className="text-left py-3 px-4">交易对</th>
-                    <th className="text-left py-3 px-4">类型</th>
-                    <th className="text-left py-3 px-4">方向</th>
-                    <th className="text-right py-3 px-4">价格</th>
-                    <th className="text-right py-3 px-4">数量</th>
-                    <th className="text-right py-3 px-4">成交量</th>
-                    <th className="text-left py-3 px-4">状态</th>
-                    {viewMode === 'open' && (
-                      <th className="text-right py-3 px-4">操作</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {getCurrentPageOrders().length > 0 ? (
-                    getCurrentPageOrders().map((order) => (
-                      <tr key={order.orderId} className="border-b hover:bg-muted/50">
-                        <td className="py-3 px-4">{formatDate(order.time)}</td>
-                        <td className="py-3 px-4">{order.symbol}</td>
-                        <td className="py-3 px-4">{translateOrderType(order.type)}</td>
-                        <td className={`py-3 px-4 ${order.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
-                          {translateOrderSide(order.side)}
-                        </td>
-                        <td className="py-3 px-4 text-right">{order.price}</td>
-                        <td className="py-3 px-4 text-right">{order.origQty}</td>
-                        <td className="py-3 px-4 text-right">{order.executedQty}</td>
-                        <td className={`py-3 px-4 ${
-                          order.status === 'FILLED' ? 'text-green-500' : 
-                          order.status === 'CANCELED' ? 'text-muted-foreground' : 
-                          order.status === 'PARTIALLY_FILLED' ? 'text-yellow-500' :
-                          'text-blue-500'
-                        }`}>
-                          {translateStatus(order.status)}
-                        </td>
+            <div className="relative">
+              <div className="overflow-x-auto">
+                <div className="overflow-y-auto max-h-[calc(100vh-20rem)]">
+                  <table className="w-full text-sm border-collapse relative">
+                    <thead className="sticky top-0 bg-background z-10">
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 whitespace-nowrap min-w-[160px]">时间</th>
+                        <th className="text-left py-3 px-4 whitespace-nowrap min-w-[120px]">交易对</th>
+                        <th className="text-left py-3 px-4 whitespace-nowrap min-w-[80px]">类型</th>
+                        <th className="text-left py-3 px-4 whitespace-nowrap min-w-[60px]">方向</th>
+                        <th className="text-right py-3 px-4 whitespace-nowrap min-w-[70px]">价格</th>
+                        <th className="text-right py-3 px-4 whitespace-nowrap min-w-[70px]">数量</th>
+                        <th className="text-right py-3 px-4 whitespace-nowrap min-w-[70px]">成交量</th>
+                        <th className="text-left py-3 px-4 whitespace-nowrap min-w-[100px]">状态</th>
                         {viewMode === 'open' && (
-                          <td className="py-3 px-4 text-right">
-                            {order.status === 'NEW' && (
-                              <div className="flex justify-end space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 text-red-500 hover:text-red-600"
-                                  onClick={() => handleCancelOrder(order)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </td>
+                          <th className="text-right py-3 px-4 whitespace-nowrap min-w-[80px] sticky right-0 bg-background shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.1)]">操作</th>
                         )}
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={viewMode === 'open' ? 9 : 8} className="py-8 text-center text-muted-foreground">
-                        暂无订单记录
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {getCurrentPageOrders().length > 0 ? (
+                        getCurrentPageOrders().map((order) => (
+                          <tr key={order.orderId} className="border-b hover:bg-muted/50">
+                            <td className="py-3 px-4 min-w-[160px]">{formatDate(order.time)}</td>
+                            <td className="py-3 px-4 min-w-[120px]">{order.symbol}</td>
+                            <td className="py-3 px-4 min-w-[80px]">{translateOrderType(order.type)}</td>
+                            <td className={`py-3 px-4 min-w-[60px] ${order.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
+                              {translateOrderSide(order.side)}
+                            </td>
+                            <td className="py-3 px-4 text-right min-w-[70px]">{Number(order.price)}</td>
+                            <td className="py-3 px-4 text-right min-w-[70px]">{Number(order.origQty)}</td>
+                            <td className="py-3 px-4 text-right min-w-[70px]">{Number(order.executedQty)}</td>
+                            <td className={`py-3 px-4 min-w-[100px] ${
+                              order.status === 'FILLED' ? 'text-green-500' : 
+                              order.status === 'CANCELED' ? 'text-muted-foreground' : 
+                              order.status === 'PARTIALLY_FILLED' ? 'text-yellow-500' :
+                              'text-blue-500'
+                            }`}>
+                              {translateStatus(order.status)}
+                            </td>
+                            {viewMode === 'open' && (
+                              <td className="py-3 px-4 text-right min-w-[80px] sticky right-0 bg-background shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.1)]">
+                                {order.status === 'NEW' && (
+                                  <div className="flex justify-end space-x-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-red-500 hover:text-red-600"
+                                      onClick={() => handleCancelOrder(order)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={viewMode === 'open' ? 9 : 8} className="py-8 text-center text-muted-foreground">
+                            暂无订单记录
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
             {/* 分页控件 */}
