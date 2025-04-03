@@ -109,11 +109,11 @@ export function Header() {
       loadApiRestrictions(preference?.current_binance_user_id || accounts[0].id)
     } catch (error) {
       console.error("加载Binance账户失败:", error)
-    } finally {
       hideLoading()
     }
   }
 
+  // 加载API限制
   const loadApiRestrictions = async (binanceUserId: string) => {
     try {
       const restrictions = await wallet.getApiRestrictions(binanceUserId)
@@ -121,8 +121,11 @@ export function Header() {
       dispatch(setCurrentUserRestrictions(restrictions.data))
     } catch (error) {
       console.error('获取API限制失败:', error)
+    } finally {
+      hideLoading()
     }
   }
+
   const handleLogout = async () => {
     try {
       // 先调用Supabase的退出登录方法（包含完整的清理）

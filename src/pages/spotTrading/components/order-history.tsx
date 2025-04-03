@@ -177,7 +177,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
   };
 
   return (
-    <Card>
+    <Card className="lg:col-span-2">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">

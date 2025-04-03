@@ -192,15 +192,15 @@ export function SpotTrade() {
           streamsInfo={streamsInfo}
         />
 
-        {/* 市场数据 */}
-        <MarketData />
-      </div>
+        {/* 订单历史 */}
+        <OrderHistory
+          currentUser={currentUser}
+          selectedPair={selectedPair}
+        />
 
-      {/* 订单历史 */}
-      <OrderHistory
-        currentUser={currentUser}
-        selectedPair={selectedPair}
-      />
+        {/* 市场数据 */}
+        {/* <MarketData /> */}
+      </div>
     </div>
   );
 }
