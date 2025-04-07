@@ -43,7 +43,7 @@ const MarketPairsList: React.FC<MarketPairsListProps> = ({
                 <span className="text-muted-foreground">/</span>
                 <span>{pair.quoteAsset}</span>
               </div>
-              <div className="text-right">
+              {/* <div className="text-right">
                 <div>{pair.lastPrice}</div>
                 <div className={`text-xs ${
                   parseFloat(pair.priceChangePercent) >= 0 
@@ -52,7 +52,7 @@ const MarketPairsList: React.FC<MarketPairsListProps> = ({
                 }`}>
                   {parseFloat(pair.priceChangePercent) >= 0 ? '+' : ''}{pair.priceChangePercent}%
                 </div>
-              </div>
+              </div> */}
             </button>
           ))}
         </div>

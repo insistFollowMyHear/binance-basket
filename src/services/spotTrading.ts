@@ -16,6 +16,11 @@ export const spotTrading = {
     return get(`${baseUrl}/api/spot/symbols`, { id: binanceUserId });
   },
 
+  // 获取所有交易对24小时价格
+  getAllTickers: async (binanceUserId: string): Promise<any> => {
+    return get(`${baseUrl}/api/spot/tickers24hr`, { id: binanceUserId });
+  },
+
   // 获取当前均价
   getAvgPrice: async (binanceUserId: string, symbol: string): Promise<any> => {
     return get(`${baseUrl}/api/spot/avgPrice`, { id: binanceUserId, symbol });

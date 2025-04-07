@@ -275,7 +275,7 @@ const TradingForm: React.FC<TradingFormProps> = ({
   };
 
   return (
-    <Card className="lg:col-span-1">
+    <Card className="lg:col-span-1 h-[500px]">
       <CardHeader className="pb-2">
         <CardTitle>现货交易</CardTitle>
       </CardHeader>
@@ -381,14 +381,14 @@ const TradingForm: React.FC<TradingFormProps> = ({
             </TabsContent>
 
             <div className="mt-6 space-y-2">
-              <Button 
+              {/* <Button 
                 className="w-full" 
                 variant="outline"
                 disabled={isTestLoading || !amount || (orderType === 'LIMIT' && !price)}
                 onClick={handleTestSubmit}
               >
                 {isTestLoading ? <Loading size="sm" text="测试中..." /> : '测试下单'}
-              </Button>
+              </Button> */}
 
               <Button 
                 className="w-full" 

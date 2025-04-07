@@ -14,7 +14,9 @@ import { NoData } from './NoData'
 interface AssetBalance {
   asset: string
   free: string
-  locked: string
+  locked: string,
+  iconUrl: string
+  usdtValue: number
 }
 
 export function UserProfile() {
@@ -33,20 +35,61 @@ export function UserProfile() {
 
   const loadUserAccount = async () => {
     try {
-      const binanceUserAccount: any = await spotTrading.getUserAccount(currentUser.id)
-      const { balances = [] } = binanceUserAccount.data
-      // 只统计有余额的资产
+      // 获取账户信息和所有交易对价格
+      const [accountResponse, tickersResponse] = await Promise.all([
+        spotTrading.getUserAccount(currentUser.id),
+        spotTrading.getAllTickers(currentUser.id)
+      ])
+
+      const { balances = [] } = accountResponse.data
+      const tickers = tickersResponse.data || []
+
+      // 创建价格映射
+      const priceMap: { [key: string]: number } = {}
+      tickers.forEach((ticker: any) => {
+        priceMap[ticker.symbol] = parseFloat(ticker.lastPrice)
+      })
+
+      // 处理资产数据
       const balanceList = balances
         .filter((balance: any) => Number(balance.free) !== 0 || Number(balance.locked) !== 0)
-        .map((balance: any) => ({
-          asset: balance.asset,
-          free: balance.free,
-          locked: balance.locked
-        }))
+        .map((balance: any) => {
+          const { asset, free, locked } = balance
+          const total = Number(free) + Number(locked)
+          
+          // 计算USDT估值
+          let usdtValue = 0
+          if (asset === 'USDT') {
+            usdtValue = total
+          } else {
+            // 尝试直接用XXX/USDT的价格
+            const directPair = `${asset}USDT`
+            if (priceMap[directPair]) {
+              usdtValue = total * priceMap[directPair]
+            } else {
+              // 如果没有直接对USDT的交易对，尝试通过BTC中转
+              const btcPair = `${asset}BTC`
+              const btcUsdt = priceMap['BTCUSDT']
+              if (priceMap[btcPair] && btcUsdt) {
+                usdtValue = total * priceMap[btcPair] * btcUsdt
+              }
+            }
+          }
+
+          return {
+            asset,
+            free,
+            locked,
+            usdtValue: parseFloat(usdtValue.toFixed(2)),
+            iconUrl: `https://assets.coincap.io/assets/icons/${asset.toLowerCase()}@2x.png`
+          }
+        })
+
       setAccountAssets(balanceList)
-      // 计算总资产价值
-      const total = balanceList.reduce((sum: number, asset: any) => sum + Number(asset.free) + Number(asset.locked), 0)
-      setTotalAssetValue(total)
+
+      // 计算总USDT估值
+      const totalUsdt = balanceList.reduce((sum: number, asset: any) => sum + asset.usdtValue, 0)
+      setTotalAssetValue(totalUsdt)
     } catch (error) {
       console.error('获取用户账户失败', error)
     } finally {
@@ -100,19 +143,30 @@ export function UserProfile() {
               <div key={asset.asset} className="flex items-center justify-between p-4 rounded-lg border">
                 <div className="flex items-center space-x-4">
                   <div className="h-10 w-12 flex items-center justify-center">
-                    <span className="font-semibold">{asset.asset}</span>
+                    {/* <span className="font-semibold">{asset.asset}</span> */}
+                    <img 
+                      src={asset.iconUrl} 
+                      alt={asset.asset}
+                      className="h-8 w-8"
+                      onError={(e) => {
+                        // 如果图片加载失败，显示币种文字
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as any).nextSibling!.style.display = 'block';
+                      }}
+                    />
+                    <span className="font-semibold hidden">{asset.asset}</span>
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground">
-                      <span>可用: {asset.free}</span>
+                      <span>可用: {Number(asset.free).toLocaleString()}</span>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      <span>冻结: {asset.locked}</span>
+                      <span>冻结: {Number(asset.locked).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  {/* <p className="font-medium">{asset.usdValue.toLocaleString()} USDT</p> */}
+                  {/* <p className="font-medium">{asset.usdtValue.toLocaleString()} USDT</p> */}
                 </div>
               </div>
             ))}
