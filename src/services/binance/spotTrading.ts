@@ -1,5 +1,5 @@
 import { get, post } from '@/utils/request';
-import { baseUrl } from './config'
+import { baseUrl } from '../config'
 
 export const spotTrading = {
   // 获取当前用户现货账户信息

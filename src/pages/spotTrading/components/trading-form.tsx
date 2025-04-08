@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loading } from '@/components/ui/loading';
-import { spotTrading } from '@/services/spotTrading';
+import { spotTrading } from '@/services';
 import { useToast } from "@/hooks/use-toast";
 
 import {

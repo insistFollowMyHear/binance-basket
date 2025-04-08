@@ -1,5 +1,4 @@
-import { supabase } from './config'
-import { BinanceUser } from './config'
+import { supabase, BinanceUser } from '../config'
 
 export const binanceUsers = {
   // 获取用户的所有Binance账户

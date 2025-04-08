@@ -1,5 +1,5 @@
 import { get, post } from '@/utils/request';
-import { baseUrl } from './config'
+import { baseUrl } from '../config'
 
 export const wallet = {
   getApiRestrictions: async (binanceUserId: string) => {

@@ -1,4 +1,4 @@
-import { supabase, UserPreference } from './config'
+import { supabase, UserPreference } from '../config'
 
 export const userPreferences = {
   // 获取用户偏好

@@ -7,7 +7,7 @@ import { Wallet } from 'lucide-react'
 import { Loading } from './ui/loading'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 
-import { spotTrading } from '../services/spotTrading'
+import { spotTrading } from '../services'
 
 import { NoData } from './NoData'
 

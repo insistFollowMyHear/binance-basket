@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { spotTrading } from '@/services/spotTrading';
+import { spotTrading } from '@/services';
 import { OrderType, OrderSide, OrderStatus, OrderHistoryProps } from '../types';
 
 const PAGE_SIZE = 20; // 每页显示的订单数量

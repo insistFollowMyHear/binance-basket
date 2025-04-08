@@ -47,7 +47,7 @@ import { binanceUsers, userPreferences, auth, wallet, BinanceUser } from "../ser
 
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "../hooks/useLoading"
-import { spotTrading } from "../services/spotTrading"
+import { spotTrading } from "../services"
 
 export function Header() {
   const dispatch = useDispatch()
