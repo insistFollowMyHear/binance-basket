@@ -1,4 +1,4 @@
-import { get, post } from '@/utils/request';
+import { get } from '@/utils/request';
 import { baseUrl } from '../config'
 
 export const wallet = {

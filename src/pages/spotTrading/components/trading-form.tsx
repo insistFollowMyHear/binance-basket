@@ -381,14 +381,18 @@ const TradingForm: React.FC<TradingFormProps> = ({
             </TabsContent>
 
             <div className="mt-6 space-y-2">
-              {/* <Button 
-                className="w-full" 
-                variant="outline"
-                disabled={isTestLoading || !amount || (orderType === 'LIMIT' && !price)}
-                onClick={handleTestSubmit}
-              >
-                {isTestLoading ? <Loading size="sm" text="测试中..." /> : '测试下单'}
-              </Button> */}
+              {
+                false && (
+                  <Button 
+                    className="w-full" 
+                    variant="outline"
+                    disabled={isTestLoading || !amount || (orderType === 'LIMIT' && !price)}
+                    onClick={handleTestSubmit}
+                  >
+                    {isTestLoading ? <Loading size="sm" text="测试中..." /> : '测试下单'}
+                  </Button>
+                )
+              }
 
               <Button 
                 className="w-full" 
