@@ -301,7 +301,7 @@ export function Header() {
           <div className="flex items-center space-x-4">
             <Link to="/" className="flex items-center space-x-2">
               {/* <img src="/logo.svg" alt="BisonSwap" className="h-8 w-8" /> */}
-              <span className="text-xl font-bold text-foreground">Binance</span>
+              <span className="text-xl font-bold text-foreground">VSG</span>
             </Link>
 
             <NavigationMenu>

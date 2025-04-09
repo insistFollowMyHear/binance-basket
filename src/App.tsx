@@ -5,6 +5,7 @@ import { Header } from './components/Header'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { SpotTrade } from './pages/spotTrading/index'
+import { CoinFutures } from './pages/futures/coinFutures'
 import { Profile } from './pages/Profile'
 import { RequireAuth } from './components/RequireAuth'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -33,11 +34,11 @@ const protectedRoutes = [
   //   element: <div>U本位合约</div>,
   //   requireFutures: true
   // },
-  // {
-  //   path: '/futures/coin',
-  //   element: <div>币本位合约</div>,
-  //   requireFutures: true
-  // }
+  {
+    path: '/futures/coin',
+    element: <CoinFutures />,
+    requireFutures: true
+  }
 ]
 
 // 应用入口组件，包含路由表和Redux Provider

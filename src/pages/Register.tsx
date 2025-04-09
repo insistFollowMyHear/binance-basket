@@ -41,7 +41,7 @@ export function Register() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold">注册 Binance</h2>
+          <h2 className="text-3xl font-bold">注册 VSG</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             创建您的账户，开始交易之旅
           </p>

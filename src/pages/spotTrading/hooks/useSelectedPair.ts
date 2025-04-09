@@ -45,11 +45,13 @@ export function useSelectedPair(userId?: string) {
 
   // 获取当前均价
   const getAvgPrice = useCallback(async () => {
-    if (!userId || !selectedPair.symbol) return;
+    const _str = localStorage.getItem(STORAGE_KEY);
+    const selectedSymbol = _str ? JSON.parse(_str).symbol : selectedPair.symbol;
+    if (!userId || !selectedSymbol) return;
 
     setIsLoading(true);
     try {
-      const res = await spotTrading.getAvgPrice(userId, selectedPair.symbol);
+      const res = await spotTrading.getAvgPrice(userId, selectedSymbol);
       setAvgPrice(res.data.price);
       return res.data.price;
     } catch (error) {
@@ -61,7 +63,7 @@ export function useSelectedPair(userId?: string) {
 
   // 处理交易对选择
   const handlePairSelect = useCallback((pair: MarketPair) => {
-    setSelectedPair(pair);
+    setSelectedPair((_prev) => pair);
     // 保存到 localStorage
     localStorage.setItem(STORAGE_KEY, JSON.stringify(pair));
     // 保存到 Redux

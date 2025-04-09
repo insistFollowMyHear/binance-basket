@@ -13,11 +13,15 @@ import {
 import { Loading } from '@/components/ui/loading'
 import MarketPairsList from '@/components/market-pairs-list';
 
+
 // import MarketData from './components/market-data';
 import TradingForm from './components/trading-form';
 import OrderHistory from './components/order-history';
 
 import { MarketPair } from './types';
+
+import { useToast } from "@/hooks/use-toast";
+import { useLoading } from "@/hooks/useLoading"
 
 import {
   useMarketPairs,
@@ -35,6 +39,9 @@ export function SpotTrade() {
   // const [isRefreshing, setIsRefreshing] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { currentUser } = useSelector((state: RootState) => state.auth);
+
+  const { toast } = useToast()
+  const { withLoading } = useLoading()
 
   // 使用 hooks
   const {
@@ -74,6 +81,7 @@ export function SpotTrade() {
         const currentPair = pairs.find((pair: MarketPair) => pair.symbol === selectedPair.symbol);
         if (currentPair) {
           handlePairSelect(currentPair.symbol);
+          await getAvgPrice();
         }
       }
     };
@@ -91,11 +99,19 @@ export function SpotTrade() {
   // 处理交易对选择
   const handlePairSelect = async (symbol: string) => {
     const selected = marketPairs.find((pair: MarketPair) => pair.symbol === symbol);
-    if (selected) {
-      await onPairSelect(selected);
-      await getUserAccount(selected);
-    }
-    await getAvgPrice();
+    selected && withLoading(async () => {
+      try {
+        await onPairSelect(selected);
+        await getUserAccount(selected);
+        setStreamsInfo({});
+      } catch {
+        toast({
+          title: '切换失败',
+          description: '请重新尝试',
+          variant: 'destructive',
+        })
+      }
+    }, '切换中')
     subscribeMarketData(selected);
   };
 
@@ -106,6 +122,7 @@ export function SpotTrade() {
       unsubscribeRef.current = null;
     }
 
+
     const symbolStr = selected?.symbol || selectedPair.symbol;
 
     unsubscribeRef.current = wsService.subscribeMarket(
@@ -114,10 +131,10 @@ export function SpotTrade() {
       (data: WSData) => {
         if (
           data.type === "market_stream_message" && 
-          data.symbol === selectedPair.symbol
+          data.symbol === symbolStr
         ) {
           const { data: info } = data;
-          if (info?.s === selectedPair.symbol) {
+          if (info?.s === symbolStr) {
             setStreamsInfo(info);
           }
         }
