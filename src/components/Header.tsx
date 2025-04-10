@@ -328,7 +328,7 @@ export function Header() {
                   )
                 }
 
-                {/* {
+                {
                   currentBinanceUserRestrictions?.enableFutures && (
                     <NavigationMenuItem>
                       <NavigationMenuTrigger className="text-foreground">
@@ -356,7 +356,7 @@ export function Header() {
                       </NavigationMenuContent>
                     </NavigationMenuItem>
                   )
-                } */}
+                }
               </NavigationMenuList>
             </NavigationMenu>
           </div>
