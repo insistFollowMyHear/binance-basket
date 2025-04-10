@@ -1,10 +1,9 @@
 import React, { RefObject } from 'react';
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MarketPair } from '@/pages/spotTrading/types';
 
 interface MarketPairsListProps {
-  pairs: MarketPair[];
+  pairs: any[];
   searchQuery: string;
   onSearch: (value: string) => void;
   onSelect: (symbol: string) => void;
@@ -43,16 +42,6 @@ const MarketPairsList: React.FC<MarketPairsListProps> = ({
                 <span className="text-muted-foreground">/</span>
                 <span>{pair.quoteAsset}</span>
               </div>
-              {/* <div className="text-right">
-                <div>{pair.lastPrice}</div>
-                <div className={`text-xs ${
-                  parseFloat(pair.priceChangePercent) >= 0 
-                    ? 'text-green-500' 
-                    : 'text-red-500'
-                }`}>
-                  {parseFloat(pair.priceChangePercent) >= 0 ? '+' : ''}{pair.priceChangePercent}%
-                </div>
-              </div> */}
             </button>
           ))}
         </div>

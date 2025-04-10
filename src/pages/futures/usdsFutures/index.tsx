@@ -16,7 +16,7 @@ export function UsdsFutures() {
   useEffect(() => {
     if (currentUser?.id) {
       Promise.all([
-        get24hrPriceChangeStatistics(),
+        get24hrPriceChangeStatistics()
       ]).then(([priceChangeStatistics]) => {
         setPriceChangeStatistics(priceChangeStatistics);
       });
@@ -34,21 +34,23 @@ export function UsdsFutures() {
   }
 
   return (
-    <div className="container mx-auto px-4  space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {
-          priceChangeStatistics && (
-            <SymbolHeader
-              priceChangeStatistics={priceChangeStatistics}
-            />
-          )
-        }
-      
-        <TradingForm />
-        
-        <AccountModule />
-        
-        <OrderHistory />
+    <div className="container mx-auto p-4">
+      {
+        priceChangeStatistics && (
+          <SymbolHeader
+            priceChangeStatistics={priceChangeStatistics}
+          />
+        )
+      }
+      <div className="flex gap-6">
+        <div >
+          <TradingForm />
+        </div>
+
+        <div className="w-full">
+          <AccountModule />
+          <OrderHistory />
+        </div>
       </div>
     </div>
   );
