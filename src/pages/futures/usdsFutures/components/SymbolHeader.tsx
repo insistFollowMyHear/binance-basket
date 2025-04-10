@@ -1,17 +1,11 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
+import { SymbolHeaderProps } from '../types';
 
 // 交易对数据接口
-interface SymbolInfo {
-  symbol: string;
-  lastPrice: string;
-  priceChangePercent: string;
-  volume: string;
-  high: string;
-  low: string;
-}
+const SymbolHeader = React.memo(({ priceChangeStatistics }: SymbolHeaderProps) => {
+  console.log(priceChangeStatistics);
 
-export function SymbolHeader() {
   // 当前选中的交易对
   const [selectedSymbol, setSelectedSymbol] = useState<string>('BTCUSDT');
   // 交易对下拉框是否展开
@@ -20,7 +14,7 @@ export function SymbolHeader() {
   const [searchText, setSearchText] = useState<string>('');
   
   // 模拟交易对列表数据
-  const symbols: SymbolInfo[] = [
+  const symbols: any[] = [
     { symbol: 'BTCUSDT', lastPrice: '68,245.50', priceChangePercent: '+2.35', volume: '12.5B', high: '68,980.20', low: '67,125.30' },
     { symbol: 'ETHUSDT', lastPrice: '3,450.75', priceChangePercent: '+1.78', volume: '4.2B', high: '3,510.40', low: '3,380.20' },
     { symbol: 'BNBUSDT', lastPrice: '578.45', priceChangePercent: '-0.52', volume: '850M', high: '585.20', low: '572.30' },
@@ -127,4 +121,6 @@ export function SymbolHeader() {
       </div>
     </Card>
   );
-} 
+});
+
+export default SymbolHeader;
