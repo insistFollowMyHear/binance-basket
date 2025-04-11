@@ -137,6 +137,9 @@ class WebSocketService {
         } else if (type === 'user') {
           const [userId] = params;
           return this.subscribeUserData(userId, handler);
+        } else if (type === 'usds_futures') {
+          const [symbol, streams] = params;
+          return this.subscribeUsdsFutures(symbol, streams.split('&'), handler);
         }
       }));
       // 添加延迟，避免短时间内发送过多请求

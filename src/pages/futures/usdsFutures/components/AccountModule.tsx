@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 
-// 资产类型
-type AssetType = 'USDT' | 'BTC' | 'ETH' | 'BNB' | 'USDC';
-
 export function AccountModule() {
   // 当前选择的资产类型
-  const [selectedAsset, setSelectedAsset] = useState<AssetType>('USDT');
+  const [selectedAsset, setSelectedAsset] = useState('USDT');
   // 资产下拉框是否展开
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
 
@@ -25,10 +22,10 @@ export function AccountModule() {
   };
 
   // 获取当前选中的资产数据
-  const currentAsset = assets[selectedAsset];
+  const currentAsset = assets[selectedAsset as keyof typeof assets];
 
   // 处理资产类型切换
-  const handleSelectAsset = (asset: AssetType) => {
+  const handleSelectAsset = (asset: string) => {
     setSelectedAsset(asset);
     setDropdownOpen(false);
   };
@@ -82,7 +79,7 @@ export function AccountModule() {
                     className={`px-4 py-2 cursor-pointer hover:bg-gray-600 ${
                       selectedAsset === asset ? 'bg-gray-600' : ''
                     }`}
-                    onClick={() => handleSelectAsset(asset as AssetType)}
+                    onClick={() => handleSelectAsset(asset)}
                   >
                     <span className="font-medium text-white">{asset}</span>
                   </div>
