@@ -6,14 +6,14 @@ export function NoData({ text, description }: { text?: string, description?: str
 
   return (
     <div className="container mx-auto p-6 mt-10">
-        <Card>
-          <CardContent className="py-10">
-            <div className="text-center text-muted-foreground">
-              <p>{_text}</p>
-              <p className="text-sm mt-2">{_description}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="py-10">
+          <div className="text-center text-muted-foreground">
+            <p>{_text}</p>
+            <p className="text-sm mt-2">{_description}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

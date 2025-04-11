@@ -4,13 +4,19 @@ export interface MarketData {
   data: any;
 }
 
+export interface UsdsFuturesData {
+  type: 'usds_futures_stream_message';
+  symbol: string;
+  data: any;
+}
+
 export interface UserData {
   type: 'user_data';
   userId: string;
   data: any;
 }
 
-export type WSData = MarketData | UserData;
+export type WSData = MarketData | UserData | UsdsFuturesData;
 export type MessageHandler = (data: WSData) => void | Promise<void>;
 
 interface SubscribeMessage {
@@ -163,14 +169,24 @@ class WebSocketService {
     this.messageHandlers.delete(key);
 
     const { type='', payload={ symbol: '', streams: [] } } = subscribeMessage || {};
-    if (type === 'subscribe_market' && this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: 'unsubscribe_market',
-        payload: {
-          symbol: payload.symbol,
-          streams: payload.streams
-        }
-      }));
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      let kind = '';
+      switch (type) {
+        case 'subscribe_market':
+          kind = 'unsubscribe_market';
+          break;
+        case 'subscribe_usds_futures':
+          kind = 'unsubscribe_usds_futures';
+          break;
+        default:
+          break;
+      }
+      if (kind) {
+        this.ws.send(JSON.stringify({
+          type: kind,
+          payload: { symbol: payload.symbol, streams: payload.streams }
+        }));
+      }
     }
   }
 
@@ -244,6 +260,17 @@ class WebSocketService {
     const subscribeMessage: SubscribeMessage = {
       type: 'subscribe_user_data',
       payload: { userId }
+    };
+
+    return this.subscribe(key, callback, subscribeMessage);
+  }
+
+  // 订阅永续合约数据
+  public subscribeUsdsFutures(symbol: string, streams: string[], callback: MessageHandler): () => void {
+    const key = `usds_futures-${symbol}-${streams.join('&')}`;
+    const subscribeMessage: SubscribeMessage = {
+      type: 'subscribe_usds_futures',
+      payload: { symbol, streams }
     };
 
     return this.subscribe(key, callback, subscribeMessage);

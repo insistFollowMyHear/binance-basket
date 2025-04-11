@@ -1,125 +1,240 @@
-import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { SymbolHeaderProps } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+// import eventEmitter from '@/utils/eventEmitter';
+
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+
+import MarketPairsList from '@/components/market-pairs-list';
+
+import { useToast } from "@/hooks/use-toast";
+import { PriceChangeStatistics, SymbolInfo } from '../types';
+
+import { usdsFutures } from '@/services';
+import WebSocketService, { WSData } from '@/services/ws';
+
+const STORAGE_KEY = 'usdsFuturesSelectedPair';
 
 // 交易对数据接口
-const SymbolHeader = React.memo(({ priceChangeStatistics }: SymbolHeaderProps) => {
-  console.log(priceChangeStatistics);
+const SymbolHeader = React.memo(({ exchangeInfo, userID }: any) => {
+  const { toast } = useToast();
+  const wsService = new WebSocketService();
+  const symbols = exchangeInfo?.symbols || [];
 
-  // 当前选中的交易对
-  const [selectedSymbol, setSelectedSymbol] = useState<string>('BTCUSDT');
-  // 交易对下拉框是否展开
-  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
-  // 搜索关键词
-  const [searchText, setSearchText] = useState<string>('');
-  
-  // 模拟交易对列表数据
-  const symbols: any[] = [
-    { symbol: 'BTCUSDT', lastPrice: '68,245.50', priceChangePercent: '+2.35', volume: '12.5B', high: '68,980.20', low: '67,125.30' },
-    { symbol: 'ETHUSDT', lastPrice: '3,450.75', priceChangePercent: '+1.78', volume: '4.2B', high: '3,510.40', low: '3,380.20' },
-    { symbol: 'BNBUSDT', lastPrice: '578.45', priceChangePercent: '-0.52', volume: '850M', high: '585.20', low: '572.30' },
-    { symbol: 'ADAUSDT', lastPrice: '0.45', priceChangePercent: '+0.68', volume: '210M', high: '0.47', low: '0.44' },
-    { symbol: 'DOGEUSDT', lastPrice: '0.1435', priceChangePercent: '+5.23', volume: '580M', high: '0.1510', low: '0.1380' },
-  ];
-  
-  // 获取当前选中的交易对信息
-  const currentSymbol = symbols.find(s => s.symbol === selectedSymbol) || symbols[0];
-  
-  // 过滤交易对列表
-  const filteredSymbols = symbols.filter(s => 
-    s.symbol.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 切换交易对
-  const handleSelectSymbol = (symbol: string) => {
-    setSelectedSymbol(symbol);
-    setDropdownOpen(false);
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPair, setSelectedPair] = useState<SymbolInfo>(() => {
+    const savedPair = localStorage.getItem(STORAGE_KEY);
+    if (savedPair) {
+      try {
+        return JSON.parse(savedPair);
+      } catch (e) {
+        console.error('Failed to parse saved trading pair:', e);
+      }
+    }
+    return symbols[0] || {
+      symbol: '',
+      baseAsset: '',
+      quoteAsset: '',
+    };
+  });
+
+  const [currentPairPriceChange, setCurrentPairPriceChange] = useState<PriceChangeStatistics>({
+    symbol: '',
+    priceChange: '',
+    priceChangePercent: '',
+    lastPrice: '',
+    highPrice: '',
+    lowPrice: '',
+    volume: '',
+    quoteVolume: '',
+  });
+
+  useEffect(() => {
+    setLoading(true);
+    const symbol = symbols[0]?.symbol;
+    if(symbol) {
+      !selectedPair.symbol && setSelectedPair(symbols[0]);
+      get24hrPriceChangeStatistics(selectedPair.symbol || symbol)
+    }
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    };
+  }, [selectedPair, symbols]);
+
+  // 订阅永续合约数据流
+  const subscribeUsdsFuturesStream = (symbol: string) => {
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+
+    unsubscribeRef.current = wsService.subscribeUsdsFutures(
+      symbol || selectedPair.symbol,
+      ['ticker'],
+      (data: WSData) => {
+        if (data.type === 'usds_futures_stream_message' && data.symbol === symbol) {
+          const { data: info } = data;
+          if (info?.s === symbol) {
+            setCurrentPairPriceChange({
+              symbol: info.s,
+              priceChange: info.p,
+              priceChangePercent: info.P,
+              lastPrice: info.c,
+              highPrice: info.h,
+              lowPrice: info.l,
+              volume: info.v,
+              quoteVolume: info.q,
+            });
+          }
+        }
+      }
+    )
+  }
+
+  // 24小时价格变动统计
+  const get24hrPriceChangeStatistics = async (symbol: string) => {
+    try {
+      const res = await usdsFutures.get24hrPriceChangeStatistics(userID, symbol);
+      setCurrentPairPriceChange(res.data)
+      subscribeUsdsFuturesStream(symbol);
+    } catch (error) {
+      toast({
+        title: '获取24小时价格变动统计失败',
+        description: '请稍后重试',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 搜索
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+  }
+
+  // 选择交易对
+  const handlePairSelect = (symbol: string) => {
+    const selected = symbols.find((pair: any) => pair.symbol === symbol);
+    if(selected) {
+      setSelectedPair(selected);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(selected));
+    }
+  }
+
+  const renderPriceInfo = () => {
+    if (loading) {
+      return (
+        <div className="flex space-x-6">
+          {[...Array(6)].map((_, index) => (
+            <div key={index}>
+              <div className="text-[#848e9c] text-xs mb-1">
+                <Skeleton className="h-4 w-16" />
+              </div>
+              <div>
+                <Skeleton className="h-6 w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex space-x-6">
+        <div>
+          <div className="text-[#848e9c] text-xs">最新价格</div>
+          <div className={`text-base font-semibold ${
+            Number(currentPairPriceChange.priceChangePercent) >= 0 ? 'text-green-500' : 'text-red-500'
+          }`}>
+            {currentPairPriceChange.lastPrice}
+          </div>
+        </div>
+        <div>
+          <div className="text-[#848e9c] text-xs">24h涨跌</div>
+          <div className={`text-base font-semibold ${
+            Number(currentPairPriceChange.priceChangePercent) >= 0 ? 'text-green-500' : 'text-red-500'
+          }`}>
+            {Number(currentPairPriceChange.priceChangePercent) >= 0 ? '+' : ''}{currentPairPriceChange.priceChangePercent}%
+          </div>
+        </div>
+        <div>
+          <div className="text-[#848e9c] text-xs">24h最高</div>
+          <div className="text-base font-semibold">{currentPairPriceChange.highPrice}</div>
+        </div>
+        <div>
+          <div className="text-[#848e9c] text-xs">24h最低</div>
+          <div className="text-base font-semibold">{currentPairPriceChange.lowPrice}</div>
+        </div>
+        <div>
+          <div className="text-[#848e9c] text-xs">24h成交量({selectedPair.baseAsset})</div>
+          <div className="text-base font-semibold">{currentPairPriceChange.volume}</div>
+        </div>
+        <div>
+          <div className="text-[#848e9c] text-xs">24h成交量({selectedPair.quoteAsset})</div>
+          <div className="text-base font-semibold">{currentPairPriceChange.quoteVolume}</div>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <Card>
-      <div className="flex items-center justify-between">
-        {/* 交易对选择器 */}
-        <div className="relative">
-          <div 
-            className="flex items-center space-x-2 cursor-pointer" 
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+    <div className="flex items-center mb-4">
+      {/* 交易对选择器 */}
+      {symbols.length > 0 ? (
+        <div className="relative min-w-[200px] mr-8">
+          <Select 
+            value={selectedPair.symbol} 
+            onValueChange={handlePairSelect}
+            onOpenChange={(open) => {
+              if (open && searchInputRef.current) {
+                // 当下拉框打开时，聚焦到搜索框
+                setTimeout(() => {
+                  searchInputRef.current?.focus();
+                }, 0);
+              }
+            }}
           >
-            <span className="text-xl font-bold text-white">{selectedSymbol}</span>
-            <svg className={`w-4 h-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-          
-          {/* 下拉选择框 */}
-          {dropdownOpen && (
-            <div className="absolute z-10 w-80 mt-2 bg-gray-700 rounded-lg shadow-lg">
-              <div className="p-2">
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 bg-gray-800 text-white rounded-lg focus:outline-none"
-                  placeholder="搜索交易对"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                />
+          <SelectTrigger className="w-full max-w-[300px]">
+            <SelectValue>
+              <div className="flex items-center gap-2">
+                <span className="font-bold">{selectedPair.symbol}</span>
+                <span className="text-muted-foreground">永续</span>
               </div>
-              <div className="max-h-60 overflow-y-auto">
-                {filteredSymbols.map((symbol) => (
-                  <div
-                    key={symbol.symbol}
-                    className={`px-4 py-2 cursor-pointer hover:bg-gray-600 ${
-                      selectedSymbol === symbol.symbol ? 'bg-gray-600' : ''
-                    }`}
-                    onClick={() => handleSelectSymbol(symbol.symbol)}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-white">{symbol.symbol}</span>
-                      <span className={`font-medium ${
-                        Number(symbol.priceChangePercent) >= 0 ? 'text-green-500' : 'text-red-500'
-                      }`}>
-                        {symbol.lastPrice}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <MarketPairsList
+              pairs={symbols}
+              searchQuery={searchQuery}
+              onSearch={handleSearchChange}
+              onSelect={handlePairSelect}
+              searchInputRef={searchInputRef}
+            />
+          </SelectContent>
+          </Select>
         </div>
-        
-        {/* 交易对信息 */}
-        <div className="flex space-x-6">
-          <div>
-            <div className="text-gray-400 text-sm">最新价格</div>
-            <div className={`text-lg font-semibold ${
-              Number(currentSymbol.priceChangePercent) >= 0 ? 'text-green-500' : 'text-red-500'
-            }`}>
-              {currentSymbol.lastPrice}
-            </div>
-          </div>
-          <div>
-            <div className="text-gray-400 text-sm">24h涨跌</div>
-            <div className={`text-lg font-semibold ${
-              Number(currentSymbol.priceChangePercent) >= 0 ? 'text-green-500' : 'text-red-500'
-            }`}>
-              {Number(currentSymbol.priceChangePercent) >= 0 ? '+' : ''}{currentSymbol.priceChangePercent}%
-            </div>
-          </div>
-          <div>
-            <div className="text-gray-400 text-sm">24h成交额</div>
-            <div className="text-lg font-semibold text-white">{currentSymbol.volume}</div>
-          </div>
-          <div>
-            <div className="text-gray-400 text-sm">24h最高</div>
-            <div className="text-lg font-semibold text-white">{currentSymbol.high}</div>
-          </div>
-          <div>
-            <div className="text-gray-400 text-sm">24h最低</div>
-            <div className="text-lg font-semibold text-white">{currentSymbol.low}</div>
-          </div>
+      ) : (
+        <div className="relative min-w-[200px] mr-8">
+          <Skeleton className="h-10 w-full" />
         </div>
-      </div>
-    </Card>
+      )}
+      
+      {/* 交易对信息 */}
+      {renderPriceInfo()}
+    </div>
   );
 });
 
