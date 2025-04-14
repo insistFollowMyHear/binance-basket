@@ -207,23 +207,23 @@ const SymbolHeader = React.memo(({ exchangeInfo, userID }: any) => {
               }
             }}
           >
-          <SelectTrigger className="w-full max-w-[300px]">
-            <SelectValue>
-              <div className="flex items-center gap-2">
-                <span className="font-bold">{selectedPair.symbol}</span>
-                <span className="text-muted-foreground">永续</span>
-              </div>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <MarketPairsList
-              pairs={symbols}
-              searchQuery={searchQuery}
-              onSearch={handleSearchChange}
-              onSelect={handlePairSelect}
-              searchInputRef={searchInputRef}
-            />
-          </SelectContent>
+            <SelectTrigger className="w-full max-w-[300px]">
+              <SelectValue>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{selectedPair.symbol}</span>
+                  <span className="text-muted-foreground">永续</span>
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <MarketPairsList
+                pairs={symbols}
+                searchQuery={searchQuery}
+                onSearch={handleSearchChange}
+                onSelect={handlePairSelect}
+                searchInputRef={searchInputRef}
+              />
+            </SelectContent>
           </Select>
         </div>
       ) : (
