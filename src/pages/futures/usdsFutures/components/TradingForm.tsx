@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 // 保证金模式
 type MarginMode = 'cross' | 'isolated';
-// 交易类型
-type TradeType = 'open' | 'close';
 // 订单类型
-type OrderType = 'limit' | 'market';
+type OrderType = 'LIMIT' | 'MARKET';
 // 交易方向
 type TradeSide = 'long' | 'short';
 // 单位类型
@@ -20,10 +25,8 @@ export function TradingForm({ symbol = 'BTCUSDT' }: { symbol?: string }) {
   const [showLeverageModal, setShowLeverageModal] = useState<boolean>(false);
   // 是否显示保证金模式弹窗
   const [showMarginModeModal, setShowMarginModeModal] = useState<boolean>(false);
-  // 交易类型：开仓或平仓
-  const [tradeType, setTradeType] = useState<TradeType>('open');
   // 订单类型：限价或市价
-  const [orderType, setOrderType] = useState<OrderType>('limit');
+  const [orderType, setOrderType] = useState<OrderType>('LIMIT');
   // 价格输入
   const [price, setPrice] = useState<string>('');
   // 数量输入
@@ -31,8 +34,7 @@ export function TradingForm({ symbol = 'BTCUSDT' }: { symbol?: string }) {
   // 单位类型：USDT或代币
   const [unitType, setUnitType] = useState<UnitType>('USDT');
   // 是否启用止盈止损
-  const [enableTakeProfit, setEnableTakeProfit] = useState<boolean>(false);
-  const [enableStopLoss, setEnableStopLoss] = useState<boolean>(false);
+  const [enableTakeProfitAndStopLoss, setEnableTakeProfitAndStopLoss] = useState<boolean>(false);
   // 止盈止损价格
   const [takeProfit, setTakeProfit] = useState<string>('');
   const [stopLoss, setStopLoss] = useState<string>('');
@@ -169,235 +171,157 @@ export function TradingForm({ symbol = 'BTCUSDT' }: { symbol?: string }) {
   };
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg">
-      {/* 头部保证金模式和杠杆设置 */}
-      <div className="flex justify-between items-center mb-4">
-        <button 
-          onClick={() => setShowMarginModeModal(true)}
-          className="flex items-center space-x-1 px-3 py-1 bg-gray-700 rounded hover:bg-gray-600"
-        >
-          <span className="text-white">{marginMode === 'cross' ? '全仓' : '逐仓'}</span>
-          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        
-        <button 
-          onClick={() => setShowLeverageModal(true)}
-          className="flex items-center space-x-1 px-3 py-1 bg-gray-700 rounded hover:bg-gray-600"
-        >
-          <span className="text-white">{leverage}x</span>
-          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-      </div>
-      
-      {/* 开仓/平仓切换 */}
-      <div className="flex mb-4">
-        <button
-          className={`flex-1 py-2 text-center ${
-            tradeType === 'open' 
-              ? 'text-blue-500 border-b-2 border-blue-500' 
-              : 'text-gray-400 border-b border-gray-700'
-          }`}
-          onClick={() => setTradeType('open')}
-        >
-          开仓
-        </button>
-        <button
-          className={`flex-1 py-2 text-center ${
-            tradeType === 'close' 
-              ? 'text-blue-500 border-b-2 border-blue-500' 
-              : 'text-gray-400 border-b border-gray-700'
-          }`}
-          onClick={() => setTradeType('close')}
-        >
-          平仓
-        </button>
-      </div>
-      
-      {/* 限价/市价切换 */}
-      <div className="flex space-x-2 mb-4">
-        <button
-          className={`px-4 py-2 rounded-lg ${
-            orderType === 'limit' 
-              ? 'bg-gray-700 text-blue-500' 
-              : 'bg-gray-700 text-gray-400'
-          }`}
-          onClick={() => setOrderType('limit')}
-        >
-          限价
-        </button>
-        <button
-          className={`px-4 py-2 rounded-lg ${
-            orderType === 'market' 
-              ? 'bg-gray-700 text-blue-500' 
-              : 'bg-gray-700 text-gray-400'
-          }`}
-          onClick={() => setOrderType('market')}
-        >
-          市价
-        </button>
-      </div>
-      
-      {/* 可用余额 */}
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-gray-400">可用</span>
-        <span className="text-white">{availableBalance} USDT</span>
-      </div>
-      
-      {/* 价格输入 - 仅限价单显示 */}
-      {orderType === 'limit' && (
-        <div className="mb-4">
-          <div className="relative">
-            <input
-              type="text"
-              className="w-full bg-gray-700 text-white p-3 pr-16 rounded-lg focus:outline-none"
-              placeholder="价格"
+    <Card >
+      <CardContent className="p-4">
+        {/* 头部保证金模式和杠杆设置 */}
+        <div className='flex items-center gap-4 mb-4'>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowMarginModeModal(true)}
+          >
+            {marginMode === 'cross' ? '全仓' : '逐仓'}
+          </Button>
+          <Button 
+            size="sm"
+            variant="outline"
+            onClick={() => setShowLeverageModal(true)}
+          >
+            {leverage}x
+          </Button>
+        </div>
+
+        {/* 限价/市价切换 */}
+        <Tabs defaultValue="limit" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="limit" onClick={() => setOrderType('LIMIT')}>限价</TabsTrigger>
+            <TabsTrigger value="market" onClick={() => setOrderType('MARKET')}>市价</TabsTrigger>
+          </TabsList>
+
+        {/* 可用余额 */}
+        <div className="flex items-center mb-4 text-sm">
+          <span className="text-muted-foreground mr-2">可用:</span>
+          <span className="text-muted-foreground">{availableBalance} USDT</span>
+        </div>
+        </Tabs>
+
+        {/* 价格输入 - 仅限价单显示 */}
+        {orderType === 'LIMIT' && (
+          <div className="flex items-center space-x-2 mb-4">
+            <Input
+              id="market-price"
+              placeholder="0.00"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
+              type="number"
             />
-            <div className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
-              USDT
-            </div>
+            <span className='text-sm'>USDT</span>
           </div>
-        </div>
-      )}
-      
-      {/* 数量输入 */}
-      <div className="mb-4">
-        <div className="relative">
-          <input
-            type="text"
-            className="w-full bg-gray-700 text-white p-3 pr-24 rounded-lg focus:outline-none"
-            placeholder="数量"
+        )}
+
+        {/* 数量输入 */}
+        <div className="flex items-center space-x-2 mb-4">
+          <Input
+            id="market-amount"
+            placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            type="number"
           />
-          <button
-            onClick={() => setUnitType(unitType === 'USDT' ? 'TOKEN' : 'USDT')}
-            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 bg-gray-600 rounded-r-lg"
+          <Select
+            value={unitType} 
+            onValueChange={() => setUnitType(unitType === 'USDT' ? 'TOKEN' : 'USDT')}
           >
-            {unitType === 'USDT' ? 'USDT' : tokenName}
-          </button>
+            <SelectTrigger className="w-full max-w-[60px] border-none px-0 focus:ring-0">
+              <SelectValue>
+                <span className='text-sm'>{unitType === 'USDT' ? 'USDT' : tokenName}</span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="USDT">USDT</SelectItem>
+              <SelectItem value="TOKEN">{tokenName}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </div>
-      
-      {/* 数量百分比选择 */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
-        {['25%', '50%', '75%', '100%'].map((percent) => (
-          <button
-            key={percent}
-            className="bg-gray-700 text-gray-300 py-1 rounded-lg hover:bg-gray-600"
-            onClick={() => {
-              // 模拟根据百分比计算数量
-              const maxAmount = 1000;
-              const percentage = parseInt(percent) / 100;
-              setAmount((maxAmount * percentage).toString());
-            }}
+
+        {/* 止盈止损 */}
+        <div className="mb-4 space-y-3">
+          <div className='flex items-center'>
+            <Checkbox
+              id="enableTakeProfitAndStopLoss"
+              checked={enableTakeProfitAndStopLoss}
+              onCheckedChange={() => setEnableTakeProfitAndStopLoss((prev) => !prev)}
+            />
+            <Label htmlFor="enableTakeProfitAndStopLoss">
+              <span className='text-xs ml-2 cursor-pointer'>止盈/止损</span>
+            </Label>
+          </div>
+          {
+            enableTakeProfitAndStopLoss && (
+              <div className='flex items-center gap-2'>
+                <Input
+                  placeholder="止盈价格"
+                  value={takeProfit}
+                  onChange={(e) => setTakeProfit(e.target.value)}
+                />
+                <Input
+                  placeholder="止损价格"
+                  value={stopLoss}
+                  onChange={(e) => setStopLoss(e.target.value)}
+                />
+              </div>
+            )
+          }
+        </div>
+
+        {/* 交易按钮 */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <Button
+            className='bg-green-500 text-white hover:bg-green-600 hover:text-white border-none'
+            variant="outline"
+            onClick={() => handlePlaceOrder('long')}
           >
-            {percent}
-          </button>
-        ))}
-      </div>
-      
-      {/* 止盈止损 */}
-      <div className="mb-4 space-y-3">
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="enableTakeProfit"
-            checked={enableTakeProfit}
-            onChange={() => setEnableTakeProfit(!enableTakeProfit)}
-            className="mr-2"
-          />
-          <label htmlFor="enableTakeProfit" className="text-gray-300">止盈</label>
-          
-          {enableTakeProfit && (
-            <div className="relative ml-4 flex-1">
-              <input
-                type="text"
-                className="w-full bg-gray-700 text-white p-2 pr-16 rounded-lg focus:outline-none"
-                placeholder="止盈价格"
-                value={takeProfit}
-                onChange={(e) => setTakeProfit(e.target.value)}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
-                USDT
+            买入/做多
+          </Button>
+          <Button 
+            className='bg-red-500 text-white hover:bg-red-600 hover:text-white border-none'
+            variant="outline"
+            onClick={() => handlePlaceOrder('short')}
+          >
+            卖出/做空
+          </Button>
+        </div>
+
+        {/* 价格信息显示 */}
+        <div className="">
+          <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
+            <div className="space-y-2">
+              <div className='flex items-center gap-2'>
+                <span>保证金</span>
+                <span>0.00 USDT</span>
+              </div>
+              <div className='flex items-center gap-2'>
+                <span>可开</span>
+                <span>58,428.50 USDT</span>
               </div>
             </div>
-          )}
-        </div>
-        
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="enableStopLoss"
-            checked={enableStopLoss}
-            onChange={() => setEnableStopLoss(!enableStopLoss)}
-            className="mr-2"
-          />
-          <label htmlFor="enableStopLoss" className="text-gray-300">止损</label>
-          
-          {enableStopLoss && (
-            <div className="relative ml-4 flex-1">
-              <input
-                type="text"
-                className="w-full bg-gray-700 text-white p-2 pr-16 rounded-lg focus:outline-none"
-                placeholder="止损价格"
-                value={stopLoss}
-                onChange={(e) => setStopLoss(e.target.value)}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
-                USDT
+            <div className="space-y-2">
+              <div className='flex items-center gap-2'>
+                <span>保证金</span>
+                <span>0.00 USDT</span>
+              </div>
+              <div className='flex items-center gap-2'>
+                <span>可开</span>
+                <span>58,428.50 USDT</span>
               </div>
             </div>
-          )}
-        </div>
-      </div>
-      
-      {/* 交易按钮 */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <button
-          className="bg-green-500 text-white py-3 rounded-lg hover:bg-green-600"
-          onClick={() => handlePlaceOrder('long')}
-        >
-          开多
-        </button>
-        <button
-          className="bg-red-500 text-white py-3 rounded-lg hover:bg-red-600"
-          onClick={() => handlePlaceOrder('short')}
-        >
-          开空
-        </button>
-      </div>
-      
-      {/* 价格信息显示 */}
-      <div className="bg-gray-700 p-3 rounded-lg">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <div className="text-gray-400">开多强平价</div>
-            <div className="text-white">≈ 58,428.50 USDT</div>
-          </div>
-          <div>
-            <div className="text-gray-400">开空强平价</div>
-            <div className="text-white">≈ 79,254.30 USDT</div>
-          </div>
-          <div>
-            <div className="text-gray-400">保证金</div>
-            <div className="text-white">≈ 500.00 USDT</div>
-          </div>
-          <div>
-            <div className="text-gray-400">最大可开</div>
-            <div className="text-white">≈ 2.5 BTC</div>
           </div>
         </div>
-      </div>
+      </CardContent>
       
       {/* 模态框 */}
       {renderLeverageModal()}
       {renderMarginModeModal()}
-    </div>
+    </Card>
   );
 } 

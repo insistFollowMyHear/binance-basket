@@ -1,6 +1,6 @@
 import { useState } from 'react';
-
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
 
 // 标签类型
@@ -47,24 +47,24 @@ export function OrderHistory() {
   
 
   // 处理平仓操作
-  const handleClosePosition = (symbol: string, side: 'long' | 'short') => {
-    alert(`平仓 ${symbol} ${side === 'long' ? '多头' : '空头'} 仓位`);
-  };
+  // const handleClosePosition = (symbol: string, side: 'long' | 'short') => {
+  //   alert(`平仓 ${symbol} ${side === 'long' ? '多头' : '空头'} 仓位`);
+  // };
   
-  // 处理调整杠杆操作
-  const handleAdjustLeverage = (symbol: string) => {
-    alert(`调整 ${symbol} 杠杆`);
-  };
+  // // 处理调整杠杆操作
+  // const handleAdjustLeverage = (symbol: string) => {
+  //   alert(`调整 ${symbol} 杠杆`);
+  // };
   
-  // 处理设置止盈止损操作
-  const handleSetTPSL = (symbol: string) => {
-    alert(`设置 ${symbol} 止盈止损`);
-  };
+  // // 处理设置止盈止损操作
+  // const handleSetTPSL = (symbol: string) => {
+  //   alert(`设置 ${symbol} 止盈止损`);
+  // };
   
-  // 处理取消订单操作
-  const handleCancelOrder = (symbol: string) => {
-    alert(`取消 ${symbol} 订单`);
-  };
+  // // 处理取消订单操作
+  // const handleCancelOrder = (symbol: string) => {
+  //   alert(`取消 ${symbol} 订单`);
+  // };
 
   // 渲染持仓列表
   const renderPositions = () => {
@@ -89,7 +89,7 @@ export function OrderHistory() {
               <TableHead className="min-w-[100px]">强平价格</TableHead>
               <TableHead className="min-w-[100px]">保证金比率</TableHead>
               <TableHead className="min-w-[100px]">保证金</TableHead>
-              <TableHead className="sticky right-0 bg-white shadow-left z-10">操作</TableHead>
+              <TableHead className="sticky right-0 bg-background shadow-left z-10">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -103,7 +103,7 @@ export function OrderHistory() {
                 <TableCell className="min-w-[100px]">{position.liquidationPrice}</TableCell>
                 <TableCell className="min-w-[100px]">{position.marginRatio}</TableCell>
                 <TableCell className="min-w-[100px]">{position.margin}</TableCell>
-                <TableCell className="min-w-[100px] flex space-x-2 sticky right-0 bg-white shadow-left z-10">
+                <TableCell className="min-w-[100px] flex space-x-2 sticky right-0 bg-background shadow-left z-10">
                   <Button variant="outline" size="sm">
                     平仓
                   </Button>
@@ -159,32 +159,42 @@ export function OrderHistory() {
   };
 
   return (
-    <div className="p-4 pt-0">
-      <div className="flex space-x-4 mb-4">
-        <Button
-          variant={activeTab === 'positions' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setActiveTab('positions')}
-        >
-          <span>持仓({positionList.length})</span>
-        </Button>
-        <Button
-          variant={activeTab === 'openOrders' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setActiveTab('openOrders')}
-        >
-          <span>当前委托({openOrderList.length})</span>
-        </Button>
-        <Button
-          variant={activeTab === 'historyOrders' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setActiveTab('historyOrders')}
-        >
-          <span>历史委托({historyOrderList.length})</span>
-        </Button>
-      </div>
-
-      {activeTab === 'positions' ? renderPositions() : renderOrders()}
-    </div>
+    <Card className="lg:col-span-2">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex space-x-4 mb-4">
+            <Button
+              variant={activeTab === 'positions' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('positions')}
+            >
+              <span>持仓({positionList.length})</span>
+            </Button>
+            <Button
+              variant={activeTab === 'openOrders' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('openOrders')}
+            >
+              <span>当前委托({openOrderList.length})</span>
+            </Button>
+            <Button
+              variant={activeTab === 'historyOrders' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('historyOrders')}
+            >
+              <span>历史委托({historyOrderList.length})</span>
+            </Button>
+          </div>
+          {
+            activeTab === 'positions' && (
+              <Button variant="outline" size="sm">一键平仓</Button>
+            )
+          }
+        </div>
+        
+        {activeTab === 'positions' ? renderPositions() : renderOrders()}
+      </CardContent>
+    </Card>
+    
   );
 } 

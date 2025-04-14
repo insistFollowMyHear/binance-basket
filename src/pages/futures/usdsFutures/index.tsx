@@ -11,21 +11,22 @@ import { TradingForm } from './components/TradingForm';
 import { AccountModule } from './components/AccountModule';
 import { OrderHistory } from './components/OrderHistory';
 
-import { Card } from '@/components/ui/card';
-
 export function UsdsFutures() {
   const { currentUser } = useSelector((state: RootState) => state.auth);
   const [exchangeInfo, setExchangeInfo] = useState<any>({
     symbols: []
   });
+  const [account, setAccount] = useState<any>(null);
 
   useEffect(() => {
     if (currentUser?.id) {
       Promise.all([
-        getExchangeInfo()
+        getExchangeInfo(),
+        // getAccount()
       ]).then(([exchangeInfo]) => {
         console.log(exchangeInfo);
         setExchangeInfo(exchangeInfo);
+        setAccount(account);
       });
     }
   }, [currentUser?.id]);
@@ -40,6 +41,16 @@ export function UsdsFutures() {
     }
   }
 
+  // 获取账户信息
+  // const getAccount = async () => {
+  //   try {
+  //     const res = await usdsFutures.getAccount(currentUser.id);
+  //     return res.data;
+  //   } catch (error) {
+  //     console.error(error);
+  //   }
+  // }
+
   if (!currentUser?.id) {
     return <NoData />
   }
@@ -52,11 +63,11 @@ export function UsdsFutures() {
       />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <TradingForm />
-        <Card className="lg:col-span-2">
-          <AccountModule />
-          <OrderHistory />
-        </Card>
+        <div className='flex flex-col gap-4'>
+          <TradingForm />
+          <AccountModule accountInfo={account} />
+        </div>
+        <OrderHistory />
       </div>
     </div>
   );
